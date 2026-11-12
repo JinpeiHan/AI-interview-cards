@@ -108,11 +108,11 @@ Q10：**解释Python中的浅拷贝与深拷贝**
 
 - **浅拷贝(copy)：**拷贝父对象，不会拷贝对象的内部的子对象。
 
-![Untitled](Python%2069ff3c2f1e2c4d0497a543ee8e93192e/Untitled.png)
+![Untitled](Python/Untitled.png)
 
 - **深拷贝(deepcopy)：** copy 模块的 deepcopy 方法，完全拷贝了父对象及其子对象。
 
-![Untitled](Python%2069ff3c2f1e2c4d0497a543ee8e93192e/Untitled%201.png)
+![Untitled](Python/Untitled%201.png)
 
 Q11：**python中self函数的作用是什么？**
 
@@ -123,7 +123,7 @@ Q12：**Python中的魔术方法是什么？举几个例子。**
 - 在python中，任何以‘__’开头和结尾的函数，都是魔法函数，例如：__init__就是一种魔法函数。它可以重载默认函数的行为，允许每个类自行定义基于操作符的特定行为。
 - 魔术方法的几个例子是：__**init__**, __add__, ___**len__**, __repr__等
 
-![Untitled](Python%2069ff3c2f1e2c4d0497a543ee8e93192e/Untitled%202.png)
+![Untitled](Python/Untitled%202.png)
 
 引用：[https://www.geeksforgeeks.org/dunder-magic-methods-python/](https://www.geeksforgeeks.org/dunder-magic-methods-python/)
 
@@ -393,7 +393,7 @@ Q39：**了解Python中的GIL吗？**
 
 Q40：**什么是迭代器和生成器？**
 
-![Untitled](Python%2069ff3c2f1e2c4d0497a543ee8e93192e/Untitled%203.png)
+![Untitled](Python/Untitled%203.png)
 
 - 迭代器：python中的容器有许多，比如列表、元组、字典、集合等，对于容器，可以很直观地想象成多个元素在一起的单元，所有的容器都是可迭代的（iterable）。通常使用for in 语句对可迭代的对象进行枚举，其底层机制在于：可迭代对象，通过 iter() 函数返回一个迭代器（iterator），迭代器提供了一个 next 的方法。调用用这个方法后，你要么得到这个容器的下一个对象，要么得到一个StopIteration 的错误。迭代器就像一个懒加载的工厂，等到有人需要的时候才给它生成值返回，没调用的时候就处于休眠状态等待下一次调用。
 
