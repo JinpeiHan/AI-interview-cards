@@ -97,11 +97,14 @@ Q21：*****在 BERT 中，token 分 哪3 种情况 mask，分别的作用是什�
 
 引用：https://www.jianshu.com/p/55b4de3de410
 
+- 参见：[BERT](BERT.md) Q3
+
 Q22：*****elmo、GPT、bert三者之间有什么区别？*****
 
 - 特征提取器：elmo采用LSTM进行提取，GPT和bert则采用Transformer进行提取。很多任务表明Transformer特征提取能力强于LSTM，elmo采用1层静态向量+2层LSTM，多层提取能力有限，而GPT和bert中的Transformer可采用多层，并行计算能力强。
 - 单/双向语言模型：GPT采用单向语言模型，elmo和bert采用双向语言模型。但是elmo实际上是两个单向语言模型（方向相反）的拼接，这种融合特征的能力比bert一体化融合特征方式弱。
 - GPT和bert都采用Transformer，Transformer是encoder-decoder结构，GPT的单向语言模型采用decoder部分，decoder的部分见到的都是不完整的句子；bert的双向语言模型则采用encoder部分，采用了完整句子
+- 参见：[BERT](BERT.md) Q12
 
 Q23：***简述BERT模型的优缺点***
 

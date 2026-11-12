@@ -40,7 +40,7 @@ Q5：**什么是python的描述符？**
 Q6：**是否可以在 Python中使用*静态方法？***
 
 - Python 中的静态方法是指静态方法绑定到类而不是该类的对象，可以在没有该类对象的情况下调用静态方法
-- 可以使用staticmethod()或者@staticmethod()**创建静态方法；**
+- 可以使用 `staticmethod()` 或者 `@staticmethod` **创建静态方法**；
 
 引用：[https://www.digitalocean.com/community/tutorials/python-static-method](https://www.digitalocean.com/community/tutorials/python-static-method)
 
@@ -256,7 +256,21 @@ Q25：**解释python的生成器**
 Q26：**Python中浅拷贝和深拷贝的区别**
 
 - 浅拷贝出来的是一个独立的对象，但它的子对象还是原对象中的子对象
-- 深拷贝会递归地Q
+- 深拷贝会递归地复制原对象及其所有子对象，得到一个与原对象完全独立的新对象，修改其中任何一层都不会影响原对象
+- 浅拷贝的方式：`copy.copy()`、切片 `a[:]`、`list(a)`、`dict.copy()` 等；深拷贝使用 `copy.deepcopy()`，它通过 `memo` 字典记录已复制的对象，可以正确处理循环引用
+- 对于不可变对象（如 int、str、只含不可变元素的 tuple），拷贝通常直接返回原对象本身
+
+```python
+import copy
+
+a = [1, [2, 3]]
+b = copy.copy(a)      # 浅拷贝
+c = copy.deepcopy(a)  # 深拷贝
+
+a[1].append(4)
+print(b)  # [1, [2, 3, 4]]，子列表是共享的
+print(c)  # [1, [2, 3]]，完全独立
+```
 
 Q27：**解释Python中的闭包**
 

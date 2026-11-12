@@ -40,7 +40,7 @@ Q5: **What is a Python descriptor?**
 Q6: **Can you use *static methods* in Python?**
 
 - A static method in Python is bound to the class rather than to an object of the class, and it can be called without an object of that class.
-- You can **create a static method** using staticmethod() or @staticmethod()**;**
+- You can **create a static method** using `staticmethod()` or `@staticmethod`.
 
 Reference: [https://www.digitalocean.com/community/tutorials/python-static-method](https://www.digitalocean.com/community/tutorials/python-static-method)
 
@@ -256,7 +256,21 @@ Q25: **Explain Python generators**
 Q26: **The difference between shallow copy and deep copy in Python**
 
 - A shallow copy produces an independent object, but its child objects are still the child objects of the original object.
-- A deep copy recursively Q
+- A deep copy recursively copies the original object and all of its child objects, producing a new object completely independent of the original; modifying any level of it does not affect the original.
+- Ways to make a shallow copy: `copy.copy()`, slicing `a[:]`, `list(a)`, `dict.copy()`, etc.; a deep copy uses `copy.deepcopy()`, which records already-copied objects in a `memo` dict and can therefore handle circular references correctly.
+- For immutable objects (e.g. int, str, a tuple containing only immutable elements), copying usually just returns the original object itself.
+
+```python
+import copy
+
+a = [1, [2, 3]]
+b = copy.copy(a)      # shallow copy
+c = copy.deepcopy(a)  # deep copy
+
+a[1].append(4)
+print(b)  # [1, [2, 3, 4]], the sub-list is shared
+print(c)  # [1, [2, 3]], fully independent
+```
 
 Q27: **Explain closures in Python**
 

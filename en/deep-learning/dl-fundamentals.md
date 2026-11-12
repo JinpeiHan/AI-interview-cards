@@ -85,6 +85,7 @@ Q15: ***Explain the meaning of the 1*1 convolution operation.***
 
 - The 1x1 convolution can change the dimension of the data along the channel axis: with input data $（c_{in},H,W）$, after processing by a $(c_{out},1,1)$ kernel the output is $(c_{out},H,W)$
 - In the Inception architecture, we use 1x1 convolution filters to reduce the dimension along the filter dimension
+- See also: [CNN](cnn.md) Q16; [Computer Vision](cv.md) Q34
 
 Q16: ***When designing a neural network, which is more important, width or depth?***
 
@@ -178,6 +179,8 @@ Q28: ***Name some CNN architectures you know***
 - Typical CNN architectures include: LetNet, AlexNet, GoogleNet, Inception V2 V3 V4, VGG, ResNet, DenseNet, ResNeXt, Channel Boosted CNN, EfficientNet
 
 Reference: [https://www.kaggle.com/general/255114](https://www.kaggle.com/general/255114)
+
+- See also: [Computer Vision](cv.md) Q35, Q36 (VGG/ResNet/Inception and residual connections)
 
 Q29: ***What is a Boltzmann machine?***
 

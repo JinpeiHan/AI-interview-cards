@@ -66,7 +66,7 @@ Q11:***SVM中的hinge loss是什么？***
 
 - 合页损失函数，主要与软间隔支持向量机有关。它将分类边界的边际或距离纳入成本计算。即使新的观测值被正确分类，如果与决策边界的距离不够大，它们也会受到惩罚。铰链损失线性增加。
 - 引入hingle loss的主要目的是惩罚软间隔SVM中被错误分类的样本
-- hingle loss的公式是：,第一项是错误分类损失，第二项为分类间隔margin距离
+- hingle loss的公式是：$\min_{w,b}\ \sum_{i=1}^{n}\max\left(0,\ 1-y_i(w^Tx_i+b)\right)+\lambda\|w\|^2$，第一项是错误分类损失（单个样本的合页损失为 $\max(0, 1-y_i f(x_i))$，当函数间隔 $y_i f(x_i)\ge 1$ 时损失为0），第二项为分类间隔margin距离（正则项，$\|w\|$ 越小间隔 $\frac{2}{\|w\|}$ 越大）；令 $\lambda=\frac{1}{2C}$ 即与软间隔SVM的原始问题等价
     
     ![https://app.yinxiang.com/shard/s24/res/8d14cae8-d22f-499a-aeb8-7a8e535fc62b.gif](https://app.yinxiang.com/shard/s24/res/8d14cae8-d22f-499a-aeb8-7a8e535fc62b.gif)
     
@@ -117,7 +117,7 @@ Q18: ***比较SVM和logistic回归***
 
 Q19：***解释什么是核技巧***
 
-- 对于非线性可分的训练集，需要通过核函数将其非线性映射到高维空间来转化成线性可分的数据集；在维度很高时，需要分别计算映射后的向量、，再计算两者内积（需要计算内积是因为SVM求解公式中包含内积操作），计算复杂度很高；
+- 对于非线性可分的训练集，需要通过核函数将其非线性映射到高维空间来转化成线性可分的数据集；在维度很高时，需要分别计算映射后的向量 $\phi(x)$、$\phi(y)$，再计算两者内积 $\langle\phi(x),\phi(y)\rangle$（需要计算内积是因为SVM求解公式中包含内积操作），计算复杂度很高；
     
     ![https://app.yinxiang.com/shard/s24/res/f3d68831-c5ee-4e9c-8737-49753082af57.gif](https://app.yinxiang.com/shard/s24/res/f3d68831-c5ee-4e9c-8737-49753082af57.gif)
     
@@ -125,7 +125,7 @@ Q19：***解释什么是核技巧***
     
     ![https://app.yinxiang.com/shard/s24/res/44a1a853-026a-40fe-8752-da1d7302a9de.gif](https://app.yinxiang.com/shard/s24/res/44a1a853-026a-40fe-8752-da1d7302a9de.gif)
     
-- 核技巧是指找到一个核函数，使得，这样只需要在低维空间里计算核函数的值即可，而不需要先把数据映射到高维空间，节省大量运算。
+- 核技巧是指找到一个核函数 $K$，使得 $K(x,y)=\langle\phi(x),\phi(y)\rangle$，这样只需要在低维空间里计算核函数的值即可，而不需要先把数据映射到高维空间，节省大量运算。
     
     ![https://app.yinxiang.com/shard/s24/res/8be1a479-ee3c-45c8-aac4-aa5f44f02ed6.gif](https://app.yinxiang.com/shard/s24/res/8be1a479-ee3c-45c8-aac4-aa5f44f02ed6.gif)
     
@@ -158,9 +158,20 @@ Q23:***解释什么是支持向量？***
 
 Q24:***提供软间隔支持向量机 (SVM)的直观解释***
 
+- **直观理解**：现实数据往往有噪声或少量离群点，严格要求所有点都在间隔外（硬间隔）可能根本无解，或者为了迁就个别离群点得到一个间隔很窄、泛化很差的超平面。软间隔SVM允许少数点"越界"——落在间隔内甚至被分错，但每越界一次都要付出代价，相当于在"**间隔尽量宽**"和"**分错尽量少**"之间做权衡。
+- **数学形式**：为每个样本引入松弛变量 $\xi_i\ge 0$，表示它违反间隔的程度：
+
+$$
+\min_{w,b,\xi}\ \frac{1}{2}\|w\|^2 + C\sum_{i=1}^{n}\xi_i \quad \text{s.t.}\ \ y_i(w^Tx_i+b)\ge 1-\xi_i,\ \ \xi_i\ge 0
+$$
+
+- $\xi_i=0$：点在间隔边界上或之外，分类正确；$0<\xi_i\le 1$：点落在间隔内但仍分类正确；$\xi_i>1$：点被分错。
+- **C 的作用**：C 越大，越界的代价越高，越接近硬间隔（间隔窄、易过拟合）；C 越小，越容忍越界（间隔宽、更平滑，可能欠拟合）。
+- **等价视角**：消去松弛变量后，$\xi_i=\max(0, 1-y_i(w^Tx_i+b))$，软间隔SVM等价于"hinge loss + L2 正则"的经验风险最小化（见 Q11）。对偶问题中仅表现为对拉格朗日乘子加了上界：$0\le\alpha_i\le C$。
+
 Q25:***解释SVM中的凸优化问题***
 
-- 凸优化的目标就是解决带约束条件函数的极值问题，通用模型是,需同时满足以下三个条件：是凸函数，是凸函数，是仿射函数；
+- 凸优化的目标就是解决带约束条件函数的极值问题，通用模型是 $\min_x f(x)\ \ \text{s.t.}\ g_i(x)\le 0\ (i=1,\dots,m),\ h_j(x)=0\ (j=1,\dots,p)$，需同时满足以下三个条件：目标函数 $f(x)$ 是凸函数，不等式约束 $g_i(x)$ 是凸函数，等式约束 $h_j(x)$ 是仿射函数；
     
     ![https://app.yinxiang.com/shard/s24/res/bbd4d0b0-071c-4661-bf9a-ec42d7014c74.gif](https://app.yinxiang.com/shard/s24/res/bbd4d0b0-071c-4661-bf9a-ec42d7014c74.gif)
     
@@ -170,7 +181,7 @@ Q25:***解释SVM中的凸优化问题***
     
     ![https://app.yinxiang.com/shard/s24/res/aa4102c0-7780-4825-87d4-2089b018264f.gif](https://app.yinxiang.com/shard/s24/res/aa4102c0-7780-4825-87d4-2089b018264f.gif)
     
-- SVM的初始问题为,其中为典型的凸函数，约束条件最高阶只有一阶，确实是仿射函数；因此初始问题为凸优化问题，可以通过拉格朗日法转换为无约束问题后，对其对偶问题求解。
+- SVM的初始问题为 $\min_{w,b}\ \frac{1}{2}\|w\|^2\ \ \text{s.t.}\ 1-y_i(w^Tx_i+b)\le 0,\ i=1,\dots,n$，其中 $\frac{1}{2}\|w\|^2$ 为典型的凸函数，约束条件最高阶只有一阶，确实是仿射函数；因此初始问题为凸优化问题，可以通过拉格朗日法转换为无约束问题后，对其对偶问题求解。
     
     ![https://app.yinxiang.com/shard/s24/res/4a63af41-25e5-41ff-a5eb-0be2213030a9.gif](https://app.yinxiang.com/shard/s24/res/4a63af41-25e5-41ff-a5eb-0be2213030a9.gif)
     
@@ -179,7 +190,7 @@ Q25:***解释SVM中的凸优化问题***
 
 Q26:***什么是多项式内核？***
 
-- 多项式核依靠多项式函数，将数据映射到高维空间，使得原本线性不可分的数据线性可分，数学形式为
+- 多项式核依靠多项式函数，将数据映射到高维空间，使得原本线性不可分的数据线性可分，数学形式为 $K(x,y)=(\gamma\, x^Ty+r)^p$（$\gamma>0$，$r\ge 0$ 为常数项，$p$ 为多项式次数）
     
     ![https://app.yinxiang.com/shard/s24/res/ed13238c-98af-4a65-a531-beee76ef7da3.gif](https://app.yinxiang.com/shard/s24/res/ed13238c-98af-4a65-a531-beee76ef7da3.gif)
     
@@ -189,7 +200,7 @@ Q26:***什么是多项式内核？***
 
 Q27***:什么是高斯（RBF）核函数?***
 
-- 高斯核函数会将原始空间映射到无穷维空间，数学形式为，由于函数形状接近高斯分布，称为高斯核函数;
+- 高斯核函数会将原始空间映射到无穷维空间，数学形式为 $K(x,y)=\exp\left(-\frac{\|x-y\|^2}{2\sigma^2}\right)=\exp\left(-\gamma\|x-y\|^2\right)$，$\gamma=\frac{1}{2\sigma^2}$，由于函数形状接近高斯分布，称为高斯核函数;
     
     ![https://app.yinxiang.com/shard/s24/res/19dcaf08-349c-44db-9b7e-6c45d59c3758.gif](https://app.yinxiang.com/shard/s24/res/19dcaf08-349c-44db-9b7e-6c45d59c3758.gif)
     
@@ -253,7 +264,7 @@ Q38***:什么情况下使用SVM，什么情况下使用逻辑回归***？
 
 Q39:***SVM中的松弛变量是什么***？
 
-- 硬间隔SVM的约束条件是$y_{i}(wx_{i}+b)\geq 1$，软间隔SVM为了处理非严格线性可分的数据，引入松弛变量$\xi _{i}$，引入后的约束条件是$y_{i}(wx_{i}+b)\geq\xi _{i}$
+- 硬间隔SVM的约束条件是$y_{i}(wx_{i}+b)\geq 1$，软间隔SVM为了处理非严格线性可分的数据，引入松弛变量$\xi _{i}$，引入后的约束条件是$y_{i}(wx_{i}+b)\geq 1-\xi _{i}$，$\xi_i\ge 0$
 - 松弛变量$\xi _{i}$是数据点到其分隔边界的函数距离，原来要求的是数据点到分界面的函数距离要大于等于1，现在就放宽到了数据点到分界面函数距离大于等于$1-\xi _{i}$，这是对异常离群点的一种容忍。
 
 Q40:***SVM中参数C和gamma的含义***
@@ -290,7 +301,7 @@ Q45:***什么是Mercer 定理，它与 SVM 有什么关系?***
 
 Q46:***使用SVM时，如何优化RBF 内核，以适应大量训练样本？***
 
-- 通过使用Random Features，核方法可以扩展到大规模数据集上；该方法源自NIPS 2017的《Random Features for Large-Scale Kernel Machines》，其基本思想是，构造一个“随机”映射$z:R^{d}\rightarrow R^{D}$ 直接将数据映射到高维空间，使得在这空间上的内积可以近似等于核函数$K(x,y)$，特征映射可由MC采样方法近似；在$R^{D}$空间做线性SVM就能够有效扩展到大规模数据集上，计算和存储对于数据是线性的。
+- 通过使用Random Features，核方法可以扩展到大规模数据集上；该方法源自NIPS 2007的《Random Features for Large-Scale Kernel Machines》，其基本思想是，构造一个“随机”映射$z:R^{d}\rightarrow R^{D}$ 直接将数据映射到高维空间，使得在这空间上的内积可以近似等于核函数$K(x,y)$，特征映射可由MC采样方法近似；在$R^{D}$空间做线性SVM就能够有效扩展到大规模数据集上，计算和存储对于数据是线性的。
 
 引用：[https://maelfabien.github.io/machinelearning/largescale/](https://maelfabien.github.io/machinelearning/largescale/)
 

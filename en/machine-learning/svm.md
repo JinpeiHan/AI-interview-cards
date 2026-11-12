@@ -66,7 +66,7 @@ Q11:***What is the hinge loss in SVM?***
 
 - The hinge loss function is mainly associated with soft-margin SVMs. It incorporates the margin, or distance from the classification boundary, into the cost calculation. Even if new observations are classified correctly, they are penalized if their distance from the decision boundary is not large enough. The hinge loss increases linearly.
 - The main purpose of introducing the hinge loss is to penalize misclassified samples in soft-margin SVM.
-- The hinge loss formula is: , where the first term is the misclassification loss and the second term is the margin distance.
+- The hinge loss formula is: $\min_{w,b}\ \sum_{i=1}^{n}\max\left(0,\ 1-y_i(w^Tx_i+b)\right)+\lambda\|w\|^2$, where the first term is the misclassification loss (the hinge loss of a single sample is $\max(0, 1-y_i f(x_i))$, which is 0 when the functional margin $y_i f(x_i)\ge 1$) and the second term is the margin distance (a regularizer: the smaller $\|w\|$, the larger the margin $\frac{2}{\|w\|}$); setting $\lambda=\frac{1}{2C}$ makes it equivalent to the primal problem of soft-margin SVM.
     
     ![https://app.yinxiang.com/shard/s24/res/8d14cae8-d22f-499a-aeb8-7a8e535fc62b.gif](https://app.yinxiang.com/shard/s24/res/8d14cae8-d22f-499a-aeb8-7a8e535fc62b.gif)
     
@@ -117,7 +117,7 @@ Q18: ***Compare SVM and logistic regression***
 
 Q19:***Explain what the kernel trick is***
 
-- For a training set that is not linearly separable, a kernel function is needed to non-linearly map it into a high-dimensional space to turn it into a linearly separable dataset; when the dimension is very high, one has to compute the mapped vectors ,  separately and then compute their inner product (the inner product is needed because the SVM solution formula contains inner product operations), which is computationally very expensive;
+- For a training set that is not linearly separable, a kernel function is needed to non-linearly map it into a high-dimensional space to turn it into a linearly separable dataset; when the dimension is very high, one has to compute the mapped vectors $\phi(x)$, $\phi(y)$ separately and then compute their inner product $\langle\phi(x),\phi(y)\rangle$ (the inner product is needed because the SVM solution formula contains inner product operations), which is computationally very expensive;
     
     ![https://app.yinxiang.com/shard/s24/res/f3d68831-c5ee-4e9c-8737-49753082af57.gif](https://app.yinxiang.com/shard/s24/res/f3d68831-c5ee-4e9c-8737-49753082af57.gif)
     
@@ -125,7 +125,7 @@ Q19:***Explain what the kernel trick is***
     
     ![https://app.yinxiang.com/shard/s24/res/44a1a853-026a-40fe-8752-da1d7302a9de.gif](https://app.yinxiang.com/shard/s24/res/44a1a853-026a-40fe-8752-da1d7302a9de.gif)
     
-- The kernel trick means finding a kernel function such that , so that one only needs to compute the value of the kernel function in the low-dimensional space, without first mapping the data into the high-dimensional space, saving a large amount of computation.
+- The kernel trick means finding a kernel function $K$ such that $K(x,y)=\langle\phi(x),\phi(y)\rangle$, so that one only needs to compute the value of the kernel function in the low-dimensional space, without first mapping the data into the high-dimensional space, saving a large amount of computation.
     
     ![https://app.yinxiang.com/shard/s24/res/8be1a479-ee3c-45c8-aac4-aa5f44f02ed6.gif](https://app.yinxiang.com/shard/s24/res/8be1a479-ee3c-45c8-aac4-aa5f44f02ed6.gif)
     
@@ -158,9 +158,20 @@ Q23:***Explain what support vectors are?***
 
 Q24:***Provide an intuitive explanation of the soft-margin Support Vector Machine (SVM)***
 
+- **Intuition**: real data usually contains noise or a few outliers. Strictly requiring every point to lie outside the margin (hard margin) may have no solution at all, or may yield a hyperplane with a very narrow margin and poor generalization just to accommodate a few outliers. Soft-margin SVM allows a few points to "cross the line" — fall inside the margin or even be misclassified — but each violation has a cost, so it trades off "**a margin as wide as possible**" against "**as few errors as possible**".
+- **Mathematical form**: introduce a slack variable $\xi_i\ge 0$ for each sample, measuring how much it violates the margin:
+
+$$
+\min_{w,b,\xi}\ \frac{1}{2}\|w\|^2 + C\sum_{i=1}^{n}\xi_i \quad \text{s.t.}\ \ y_i(w^Tx_i+b)\ge 1-\xi_i,\ \ \xi_i\ge 0
+$$
+
+- $\xi_i=0$: the point is on or outside the margin boundary and correctly classified; $0<\xi_i\le 1$: the point is inside the margin but still correctly classified; $\xi_i>1$: the point is misclassified.
+- **Role of C**: the larger C, the higher the cost of violations and the closer to a hard margin (narrow margin, prone to overfitting); the smaller C, the more violations are tolerated (wider, smoother margin, possibly underfitting).
+- **Equivalent view**: eliminating the slack variables gives $\xi_i=\max(0, 1-y_i(w^Tx_i+b))$, so soft-margin SVM is equivalent to empirical risk minimization with "hinge loss + L2 regularization" (see Q11). In the dual problem the only change is an upper bound on the Lagrange multipliers: $0\le\alpha_i\le C$.
+
 Q25:***Explain the convex optimization problem in SVM***
 
-- The goal of convex optimization is to solve extremum problems of functions with constraints. The general model is , and the following three conditions must all be satisfied:  is a convex function,  is a convex function, and  is an affine function;
+- The goal of convex optimization is to solve extremum problems of functions with constraints. The general model is $\min_x f(x)\ \ \text{s.t.}\ g_i(x)\le 0\ (i=1,\dots,m),\ h_j(x)=0\ (j=1,\dots,p)$, and the following three conditions must all be satisfied: the objective $f(x)$ is a convex function, the inequality constraints $g_i(x)$ are convex functions, and the equality constraints $h_j(x)$ are affine functions;
     
     ![https://app.yinxiang.com/shard/s24/res/bbd4d0b0-071c-4661-bf9a-ec42d7014c74.gif](https://app.yinxiang.com/shard/s24/res/bbd4d0b0-071c-4661-bf9a-ec42d7014c74.gif)
     
@@ -170,7 +181,7 @@ Q25:***Explain the convex optimization problem in SVM***
     
     ![https://app.yinxiang.com/shard/s24/res/aa4102c0-7780-4825-87d4-2089b018264f.gif](https://app.yinxiang.com/shard/s24/res/aa4102c0-7780-4825-87d4-2089b018264f.gif)
     
-- The primal problem of SVM is , where  is a typical convex function, and the highest order of the constraint is only first order, so it is indeed an affine function; therefore the primal problem is a convex optimization problem, which can be converted into an unconstrained problem via the Lagrangian method and then solved through its dual problem.
+- The primal problem of SVM is $\min_{w,b}\ \frac{1}{2}\|w\|^2\ \ \text{s.t.}\ 1-y_i(w^Tx_i+b)\le 0,\ i=1,\dots,n$, where $\frac{1}{2}\|w\|^2$ is a typical convex function, and the highest order of the constraint is only first order, so it is indeed an affine function; therefore the primal problem is a convex optimization problem, which can be converted into an unconstrained problem via the Lagrangian method and then solved through its dual problem.
     
     ![https://app.yinxiang.com/shard/s24/res/4a63af41-25e5-41ff-a5eb-0be2213030a9.gif](https://app.yinxiang.com/shard/s24/res/4a63af41-25e5-41ff-a5eb-0be2213030a9.gif)
     
@@ -179,7 +190,7 @@ Q25:***Explain the convex optimization problem in SVM***
 
 Q26:***What is the polynomial kernel?***
 
-- The polynomial kernel relies on a polynomial function to map data into a high-dimensional space, making originally linearly non-separable data linearly separable. Its mathematical form is
+- The polynomial kernel relies on a polynomial function to map data into a high-dimensional space, making originally linearly non-separable data linearly separable. Its mathematical form is $K(x,y)=(\gamma\, x^Ty+r)^p$ ($\gamma>0$, $r\ge 0$ is the constant term, $p$ is the polynomial degree)
     
     ![https://app.yinxiang.com/shard/s24/res/ed13238c-98af-4a65-a531-beee76ef7da3.gif](https://app.yinxiang.com/shard/s24/res/ed13238c-98af-4a65-a531-beee76ef7da3.gif)
     
@@ -189,7 +200,7 @@ Reference: https://www.pycodemates.com/2022/10/svm-kernels-polynomial-kernel.htm
 
 Q27***:What is the Gaussian (RBF) kernel function?***
 
-- The Gaussian kernel function maps the original space into an infinite-dimensional space. Its mathematical form is ; because the shape of the function is close to a Gaussian distribution, it is called the Gaussian kernel function;
+- The Gaussian kernel function maps the original space into an infinite-dimensional space. Its mathematical form is $K(x,y)=\exp\left(-\frac{\|x-y\|^2}{2\sigma^2}\right)=\exp\left(-\gamma\|x-y\|^2\right)$, with $\gamma=\frac{1}{2\sigma^2}$; because the shape of the function is close to a Gaussian distribution, it is called the Gaussian kernel function;
     
     ![https://app.yinxiang.com/shard/s24/res/19dcaf08-349c-44db-9b7e-6c45d59c3758.gif](https://app.yinxiang.com/shard/s24/res/19dcaf08-349c-44db-9b7e-6c45d59c3758.gif)
     
@@ -253,7 +264,7 @@ Q38***:When should you use SVM, and when should you use logistic regression***?
 
 Q39:***What are slack variables in SVM***?
 
-- The constraint of hard-margin SVM is $y_{i}(wx_{i}+b)\geq 1$. To handle data that is not strictly linearly separable, soft-margin SVM introduces slack variables $\xi _{i}$, and the constraint after introducing them is $y_{i}(wx_{i}+b)\geq\xi _{i}$
+- The constraint of hard-margin SVM is $y_{i}(wx_{i}+b)\geq 1$. To handle data that is not strictly linearly separable, soft-margin SVM introduces slack variables $\xi _{i}$, and the constraint after introducing them is $y_{i}(wx_{i}+b)\geq 1-\xi _{i}$, $\xi_i\ge 0$
 - The slack variable $\xi _{i}$ is the functional distance of a data point to its separating boundary. Originally the functional distance from a data point to the separating surface was required to be greater than or equal to 1; now this is relaxed to the functional distance from a data point to the separating surface being greater than or equal to $1-\xi _{i}$, which is a form of tolerance for anomalous outliers.
 
 Q40:***The meaning of the parameters C and gamma in SVM***
@@ -290,7 +301,7 @@ Q45:***What is Mercer's theorem, and how is it related to SVM?***
 
 Q46:***When using SVM, how can the RBF kernel be optimized to handle a large number of training samples?***
 
-- By using Random Features, kernel methods can be scaled to large datasets; this method comes from "Random Features for Large-Scale Kernel Machines" at NIPS 2017. Its basic idea is to construct a "random" mapping $z:R^{d}\rightarrow R^{D}$ that maps the data directly into a high-dimensional space, such that the inner product in this space approximates the kernel function $K(x,y)$; the feature mapping can be approximated by MC sampling; doing linear SVM in the $R^{D}$ space scales effectively to large datasets, with computation and storage linear in the data.
+- By using Random Features, kernel methods can be scaled to large datasets; this method comes from "Random Features for Large-Scale Kernel Machines" at NIPS 2007. Its basic idea is to construct a "random" mapping $z:R^{d}\rightarrow R^{D}$ that maps the data directly into a high-dimensional space, such that the inner product in this space approximates the kernel function $K(x,y)$; the feature mapping can be approximated by MC sampling; doing linear SVM in the $R^{D}$ space scales effectively to large datasets, with computation and storage linear in the data.
 
 Reference: [https://maelfabien.github.io/machinelearning/largescale/](https://maelfabien.github.io/machinelearning/largescale/)
 

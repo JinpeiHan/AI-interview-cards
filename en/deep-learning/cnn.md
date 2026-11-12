@@ -78,6 +78,7 @@ Q16: ***What are the roles of 3×3 and 1×1 convolutions, and how do they differ
     - Adding non-linearity: a 1×1 convolution followed by an activation function deepens the network without changing the receptive field (Network in Network)
     - Few parameters: the parameter count is $C_{in}\times C_{out}$, $1/9$ of a 3×3 convolution; it serves as the pointwise convolution in depthwise separable convolutions
 - Differences: 3×3 has a spatial receptive field and can extract local spatial features (edges, textures); 1×1 has a receptive field of 1 and only transforms channels, extracting no spatial features; a 3×3 convolution has $9C_{in}C_{out}$ parameters, a 1×1 has $C_{in}C_{out}$
+- See also: [Deep Learning Fundamentals](dl-fundamentals.md) Q15; [Computer Vision](cv.md) Q34
 
 Q17: ***How do you calculate the number of parameters of a Group Convolution, and how does it differ from a standard convolution?***
 

@@ -282,6 +282,7 @@ Q34: ***Why can a 1×1 convolution reduce or change the number of channels? How 
 - **Reducing computation**: e.g. in Inception/ResNet bottlenecks, a 1×1 convolution first reduces 256 channels to 64, then a 3×3 convolution is applied, and finally a 1×1 convolution restores 256 channels, greatly reducing both computation and parameters.
 - **Introducing nonlinearity**: a 1×1 convolution itself is linear, but it is usually followed by **BN + a nonlinear activation such as ReLU**, which increases the network depth and nonlinear expressive power without changing the receptive field (the idea of Network in Network).
 - **Cross-channel information fusion**: it linearly combines features of different channels, enabling information exchange across channels.
+- See also: [Deep Learning Fundamentals](dl-fundamentals.md) Q15; [CNN](cnn.md) Q16
 
 ## Image classification models (VGG, ResNet, Inception)
 

@@ -97,11 +97,14 @@ Q21: *****In BERT, what are the 3 cases into which token masking is divided, and
 
 Reference: https://www.jianshu.com/p/55b4de3de410
 
+- See also: [BERT](bert.md) Q3
+
 Q22: *****What are the differences among ELMo, GPT and BERT?*****
 
 - Feature extractor: ELMo uses LSTMs for extraction, while GPT and BERT use Transformers. Many tasks show that the Transformer's feature extraction capability is stronger than the LSTM's; ELMo uses 1 layer of static vectors + 2 LSTM layers, so its multi-layer extraction capability is limited, while the Transformers in GPT and BERT can be stacked in many layers and have strong parallel computing capability.
 - Unidirectional/bidirectional language model: GPT uses a unidirectional language model, while ELMo and BERT use bidirectional language models. However, ELMo is actually a concatenation of two unidirectional language models (in opposite directions), and this way of fusing features is weaker than BERT's integrated feature fusion.
 - GPT and BERT both use the Transformer, which is an encoder-decoder structure; GPT's unidirectional language model uses the decoder part, and the decoder only sees incomplete sentences; BERT's bidirectional language model uses the encoder part, which uses complete sentences
+- See also: [BERT](bert.md) Q12
 
 Q23: ***Briefly describe the pros and cons of the BERT model***
 

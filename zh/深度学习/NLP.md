@@ -139,6 +139,7 @@ Q24：***bert的架构是什么 目标是什么，输入包括了什么 三个em
 - Bert的结构主要是Transformer的encoder部分，其中Bert_base有12层，输出维度为768，参数量为110M，Bert_large有24层，输出维度为1024，参数总量为340M。
 - Bert的目标是利用大规模无标注语料训练，获得文本包含丰富语义信息的表征。
 - Bert的输入：token embedding，segment embedding，position embeddimg，三个向量相加作为模型的输入。
+- 参见：[BERT](BERT.md) Q1、Q2
 
 Q25：***Seq2seq模型中decode和encode的差别有哪些？***
 
@@ -156,6 +157,8 @@ Q26：***bert模型有哪些可以改进的地方？***
 - 改进：RoBERTa，移除了NSP任务，同时使用了动态Mask来代替Bert的静态mask。
 
 引用：[https://juejin.cn/post/7032813935619211295](https://juejin.cn/post/7032813935619211295)
+
+- 参见：[BERT](BERT.md) Q7–Q11
 
 Q27：***讲述BPE模型***
 

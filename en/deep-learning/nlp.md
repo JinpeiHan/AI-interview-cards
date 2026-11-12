@@ -139,6 +139,7 @@ Q24: ***What is BERT's architecture, what is its objective, what do its inputs i
 - BERT's structure is mainly the encoder part of the Transformer. Bert_base has 12 layers, an output dimension of 768 and 110M parameters; Bert_large has 24 layers, an output dimension of 1024 and 340M parameters in total.
 - BERT's objective is to train on large-scale unlabeled corpora to obtain text representations containing rich semantic information.
 - BERT's inputs: token embedding, segment embedding, position embedding; the three vectors are summed to form the model input.
+- See also: [BERT](bert.md) Q1, Q2
 
 Q25: ***What are the differences between the decoder and the encoder in a Seq2seq model?***
 
@@ -156,6 +157,8 @@ Q26: ***What aspects of the BERT model could be improved?***
 - Improvement: RoBERTa removes the NSP task and uses dynamic masking instead of BERT's static mask.
 
 Reference: [https://juejin.cn/post/7032813935619211295](https://juejin.cn/post/7032813935619211295)
+
+- See also: [BERT](bert.md) Q7–Q11
 
 Q27: ***Describe the BPE model***
 
