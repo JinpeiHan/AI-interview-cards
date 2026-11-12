@@ -4,13 +4,16 @@
 
 Q1: **Explain what Bayesian optimization is.**
 
-- Bayesian optimization is a black-box optimization algorithm used to find the extremum of a function whose analytical expression is unknown. Based on the function values at a set of sampled points, the algorithm predicts the probability distribution of the function value at any point; this is achieved through Gaussian process regression. Based on the results of the Gaussian process regression, an acquisition function is constructed to measure how worthwhile each point is to explore, and the extremum of the acquisition function is solved to determine the next sampling point. Finally, the extremum among this set of sampled points is returned as the extremum of the function.
-- In machine learning, Bayesian optimization is used in AutoML algorithms to automatically determine the hyperparameters of machine learning algorithms. Some NAS algorithms also use Bayesian optimization.
+- **Bayesian optimization is a black-box optimization method: it fits a surrogate model (usually a Gaussian process) to a few sampled points to estimate the distribution of the objective, then uses an acquisition function to pick the next most promising point, iterating and finally returning the best sampled point.**
+- The surrogate model gives a predicted mean and an uncertainty at every point.
+- The acquisition function (e.g. EI, UCB) trades off exploiting known good regions against exploring uncertain ones.
+- It suits functions that are expensive to evaluate; it is commonly used for AutoML hyperparameter search, and some NAS methods use it too.
 
 Q2: **Explain convex optimization in machine learning.**
 
-- In machine learning, if the problem to be optimized is proven to be a convex optimization problem, then it can be solved relatively well with methods such as gradient descent
-- Convex optimization is faster, simpler and less computationally expensive
+- **If the optimization problem is convex, every local optimum is the global optimum, so simple methods such as gradient descent reliably find the best solution.**
+- Convex problems are faster, simpler and cheaper to solve, and come with theoretical convergence guarantees.
+- Linear regression, logistic regression and SVMs are convex; neural network training is non-convex.
 
 ![Untitled](optimization/Untitled.png)
 
@@ -18,129 +21,111 @@ Reference: [https://stats.stackexchange.com/](https://stats.stackexchange.com/)
 
 Q3: Which hyperparameter tuning methods do you know?
 
-- **Random search**: a grid of possible values is created for the hyperparameters. Each iteration tries a random combination of hyperparameters from this grid and records the performance; finally the hyperparameter combination giving the best performance is returned.
-- **Grid search:** the search space is defined as a grid of hyperparameter values, and the algorithm's performance is evaluated at every position in the grid (exhaustive traversal); finally the hyperparameter combination giving the best performance is returned.
-- **Bayesian optimization**: assumes a functional relationship between the hyperparameters and the loss function we ultimately need to optimize; this function is minimized via algorithms such as SMBO to obtain the optimal parameter combination
+- **The common ones are grid search, random search and Bayesian optimization.**
+- **Grid search**: build a grid of candidate values for each hyperparameter, try every combination and return the best; simple but too expensive once there are many dimensions.
+- **Random search**: sample combinations at random from the search space; for the same budget it is usually more efficient than grid search, because the important hyperparameters get to try more distinct values.
+- **Bayesian optimization**: treat "hyperparameters -> validation loss" as an unknown function, build a surrogate model with methods such as SMBO, and choose the next configuration deliberately; it needs the fewest evaluations.
 
 Q4: **Explain the Adam optimizer.**
 
-- Adam: Adaptive Moment Estimation uses first-moment and second-moment estimates of the gradient to dynamically adjust the learning rate of each parameter;
-- The Adam algorithm combines Momentum + RMSProp
+- **Adam (Adaptive Moment Estimation) tracks both the first moment of the gradient (its mean, i.e. momentum) and the second moment (mean of squares), and uses them to adapt the step size of each parameter.**
+- Think of it as Momentum + RMSProp: momentum stabilizes the direction, and the second moment shrinks the step for parameters with large gradients.
+- It converges fast and is not very sensitive to the learning rate, so it is the default for many tasks (formula in Q16).
 
 Q5: **What are the limitations of the Adam algorithm?**
 
-- Although training with Adam helps converge quickly, the generalization performance of the resulting model is often worse than that obtained by training with SGD with momentum.
-- Another problem is that even though Adam has adaptive learning rates, its performance still improves when a good learning-rate schedule is used. In particular, early in training it is beneficial to use a lower learning rate to avoid divergence. This is because at the start the model weights are random, so the resulting gradients are not very reliable. If the learning rate is too large, the model may take steps that are too large before settling on suitable weights. Once the model has overcome these initial stability issues, the learning rate can be increased to speed up convergence.
+- **Adam converges quickly, but the final model often generalizes worse than one trained with SGD + Momentum.**
+- Despite its adaptive learning rate, it still needs a good learning-rate schedule to perform best.
+- Early in training the weights are random and gradients unreliable, so a large learning rate can diverge; warmup is usually used before raising the learning rate.
+- In the original Adam, L2 regularization is coupled with the adaptive step size and works poorly, so AdamW is generally used instead.
 
 Q6: **How does *Batch Size* affect the convergence of gradient descent? Why?**
 
-- Large-batch training tends to converge to minima close to the initial parameter values rather than exploring the whole parameter space.
-- Large-batch training tends to converge to sharper minima, while small-batch training tends to converge to flatter minima.
+- **Large batches have low gradient noise and tend to converge to sharper minima close to the starting point; small batches have noisy gradients that push the parameters out of sharp basins, so they tend to reach flatter minima, which usually generalize better.**
+- A flat minimum is insensitive to parameter perturbations, so it is more robust on test data.
+- Large batches give more accurate steps and better parallelism, but usually need a correspondingly larger learning rate plus warmup.
 
 ![Untitled](optimization/Untitled%201.png)
 
-As shown in the figure, both minima reach the same loss value, but the flat minimum is less sensitive to perturbations in parameter space. The experimental evidence they provide shows that large-batch training is more likely to converge to sharp minima and to minima close to the starting point. The inherent noise in small-batch training helps push the parameters out of sharp basins.
+As shown in the figure, both minima have the same loss, but the flat minimum is less sensitive to perturbations in parameter space.
 
 Reference:
 
 Q7: **In which situations would you choose a genetic algorithm as the optimization algorithm?**
 
-- When many processors can be used in parallel
-- When the objective function is highly multimodal (many local optima)
+- **A genetic algorithm fits when the objective is multimodal (many local optima), non-differentiable or a black box, and when many processors are available to evaluate in parallel.**
+- It searches with a population and needs no gradients, so it is less likely to get stuck in a single local optimum.
+- Each individual is evaluated independently, so it parallelizes naturally.
 
 Reference: [https://stats.stackexchange.com/questions/249471/when-are-genetic-algorithms-a-good-choice-for-optimization](https://stats.stackexchange.com/questions/249471/when-are-genetic-algorithms-a-good-choice-for-optimization)
 
 Q8: **How does the Adagrad algorithm adjust the learning rate?**
 
-- AdaGrad is a gradient-based optimization algorithm whose main characteristic is that it adapts the learning rate for different parameters; specifically, it makes large updates for infrequently occurring parameters and small updates for frequently occurring parameters. Therefore it is well suited to sparse data. The computation proceeds as follows:
-- Compute the gradient:
-
-$$
-g_t = \nabla_\theta J(\theta_{t-1})
-$$
-
-- Accumulate the squared gradient:
-
-$$
-r_t = r_{t-1} + g_t \odot g_t
-$$
-
-- Compute the update:
-
-$$
-\Delta \theta = {\eta \over \epsilon + \sqrt{r_t}} \odot g_t
-$$
-
-- Update the parameters:
-
-$$
-\theta_t=\theta_{t-1} - \Delta \theta
-$$
+- **Adagrad accumulates the squared historical gradients of each parameter and divides the learning rate by the square root of that sum, so frequently updated, large-gradient parameters get small steps and rarely updated parameters get larger steps.**
+- This makes it well suited to sparse data (e.g. sparse features, word embeddings).
+- The downside is that the sum only grows, so the learning rate decays monotonically and training can stall later on; RMSProp fixes this with an exponential moving average.
+- Key formula: $\theta_t=\theta_{t-1}-\dfrac{\eta}{\epsilon+\sqrt{r_t}}\odot g_t$, where $r_t=r_{t-1}+g_t\odot g_t$
 
 Q9: **Compare Newton's method and gradient descent.**
 
-- Gradient descent is an optimization algorithm based on first-order derivative information; at each step it updates the parameters in the direction opposite to the gradient. Because gradient descent only considers first-order information, it can be disturbed by noise and local minima. Newton's method is an optimization algorithm based on second-order derivative information; it uses a local quadratic approximation of the objective function and updates the parameters at each step by solving a system of linear equations.
-- Differences:
-    - Gradient descent is a first-order optimization algorithm; Newton's method is a second-order optimization algorithm
-    - Newton's method often converges faster than gradient descent
-    - Newton's method must update a two-dimensional matrix at every step, which is very expensive; in practice quasi-Newton methods are often used
-    - Newton's method has certain requirements on the initial value; in non-convex optimization problems (such as neural network training), Newton's method easily gets stuck at saddle points (its step size becomes smaller and smaller), while gradient descent escapes saddle points easily (which is why gradient descent is generally used for neural network training; high-dimensional neural networks contain a large number of saddle points)
-    - Gradient descent oscillates near the optimum, so step-size adjustment is necessary in gradient descent; specific examples are the family of adaptive learning-rate methods such as adagrad, adadelta, rmsprop and adam
+- **Gradient descent uses only first derivatives and moves along the negative gradient; Newton's method uses second derivatives (the Hessian) to build a local quadratic approximation and jumps straight to its extremum, converging faster but at a much higher cost per step.**
+- Convergence speed: near the optimum Newton's method converges quadratically, usually faster than gradient descent.
+- Cost: Newton's method must compute and invert the Hessian, which is infeasible with many parameters, so quasi-Newton methods (e.g. L-BFGS) are used in practice.
+- Non-convex problems: Newton's method is easily attracted to saddle points, while gradient descent escapes them more easily, so neural networks are generally trained with gradient descent.
+- Gradient descent oscillates near the optimum and needs step-size adjustment, which led to adaptive methods such as Adagrad, RMSProp and Adam.
 
 Q10: **How is Bayesian optimization used in hyperparameter optimization?**
 
-- In hyperparameter optimization, Bayesian optimization can use a Gaussian process model to model the hyperparameters. At each iteration, the model predicts the performance of the next hyperparameter combination based on previous results and performs a new function evaluation at that combination. In this way the model is continuously updated until the best hyperparameter combination is found.
+- **Treat "hyperparameter configuration -> validation performance" as an expensive black-box function: a surrogate such as a Gaussian process predicts how untried configurations will perform from the ones already tried, an acquisition function picks the most promising next configuration to train and evaluate, the new result updates the model, and the loop repeats until the budget runs out.**
+- Compared with grid/random search, it finds good hyperparameters with fewer training runs.
+- Common tools include Hyperopt (TPE) and Optuna.
 
 Q11: **Are pruning methods applicable to neural network optimization?**
 
-- Pruning methods can be used for neural network optimization to reduce the model's computational burden and the risk of overfitting. Pruning methods determine which neurons can be removed by evaluating the importance of each neuron. This can be achieved by using regularization techniques during training, or by applying specific pruning algorithms after training.
+- **Yes. Pruning scores the importance of neurons or weights and removes the unimportant ones, reducing computation and model size, and it can also lower the risk of overfitting.**
+- You can add a sparsity regularizer during training so some weights go to 0, or prune by importance after training and then fine-tune.
+- Unstructured pruning (individual weights) compresses more but needs sparse-compute support; structured pruning (whole channels/neurons) is easier to turn into real speedups.
 
 ![Untitled](optimization/Untitled%202.png)
 
 Q12: **In a random forest model, how do you optimize the number of trees in the forest?**
 
-- In a random forest model, the optimal number of trees can be determined via cross-validation. By evaluating different numbers of trees, the optimal number can be found to maximize the model's accuracy. In practice, 10 to 1000 trees are typically evaluated and the best number is chosen.
+- **Evaluate different numbers of trees with cross-validation (or the out-of-bag error) and choose the number at which performance levels off.**
+- More trees make results more stable and generally do not cause overfitting, but cost grows linearly.
+- In practice 10 to 1000 trees are typically evaluated, picking the point where gains stop being noticeable.
 
 Q13: ****If a CNN is very large and runs inefficiently on a mobile phone, which model compression methods do you know?****
 
-- Low-rank approximation: convolution is essentially matrix computation; low-rank approximation reconstructs the weight matrix from a series of small matrices, thereby reducing computation and storage overhead. Two approaches are **singular value decomposition and Toeplitz matrix reconstruction**
-- Model pruning and sparsity constraints: model pruning measures the importance of neurons, removes some unimportant neurons, and then fine-tunes the network, repeating this process; the idea of sparsity constraints is to add regularization to the network's optimization objective so that some weights of the trained network tend to 0, and these zero elements are the objects to be pruned; the advantage of sparsity constraints is that pruning can be completed with a single training run
-- Parameter quantization: compared with pruning, parameter quantization is a commonly used back-end compression technique. Quantization summarizes a number of representative weights from the weights, and these representatives are used to represent the specific values of a class of weights. These "representatives" are stored in a codebook, and the original weight matrix only needs to record the index of its respective "representative", greatly reducing storage overhead.
-- Knowledge distillation: use a larger, already-trained network to teach a smaller network; convert a high-accuracy but cumbersome teacher network into a more compact student network
+- **There are four main families: low-rank approximation, pruning and sparsity constraints, parameter quantization, and knowledge distillation.**
+- **Low-rank approximation**: convolution is essentially matrix computation, so approximate the weight matrix with a few small matrices (e.g. SVD, Toeplitz matrix reconstruction) to cut computation and storage.
+- **Pruning and sparsity constraints**: remove unimportant neurons and fine-tune, repeatedly; or add a sparsity regularizer to the training objective so some weights go to 0, finishing pruning in a single training run.
+- **Parameter quantization**: represent weights with low bit-widths or a few representative values in a codebook, storing only indices in the original matrix, which greatly reduces storage.
+- **Knowledge distillation**: a large trained teacher network guides a small student network, yielding a more compact model.
 
 Q14: **Describe the principle and procedure of model distillation.**
 
-- Model distillation: tune the hyperparameters of the teacher model's softmax layer to obtain a suitable set of soft targets ("soft labels" refer to the feature maps output by the large network after each convolutional layer), then, for the student model to be trained, use the same hyperparameter values to approximate the teacher model's soft targets as closely as possible, as part of the student model's overall objective function, to guide the training of the student model and achieve knowledge transfer.
+- **Distillation trains a small student model to imitate the output distribution (soft labels) of a large teacher model; soft labels carry similarity information between classes, so they teach more than hard labels alone.**
+- Procedure: train the teacher first; apply a softmax with temperature $T$ to both teacher and student logits to get softened probability distributions.
+- The student's total loss = KL divergence to the soft labels + cross-entropy to the true hard labels, as a weighted sum.
+- A higher temperature gives a smoother distribution and exposes more "dark knowledge" between classes; besides outputs, the student can also imitate intermediate feature maps.
+- Key formula: $p_i=\dfrac{\exp(z_i/T)}{\sum_j \exp(z_j/T)}$
 
 Reference: [https://blog.csdn.net/weixin_46838716/article/details](https://blog.csdn.net/weixin_46838716/article/details)
 
-
 Q15: **Why can gradient descent reduce the loss? What is its mathematical principle?**
 
-- The gradient $\nabla L(\theta)$ is the direction in which the function **increases fastest** at that point; the negative gradient direction is the direction of steepest descent
-- Mathematical principle (first-order Taylor expansion): $L(\theta+\Delta\theta)\approx L(\theta)+\nabla L(\theta)^T\Delta\theta$; taking $\Delta\theta=-\eta\nabla L(\theta)$ ($\eta>0$ is the learning rate) gives $L(\theta-\eta\nabla L)\approx L(\theta)-\eta\lVert\nabla L(\theta)\rVert^2\le L(\theta)$, so as long as the gradient is nonzero and the step size is small enough, the loss decreases
-- By the Cauchy-Schwarz inequality, $\nabla L^T\Delta\theta\ge-\lVert\nabla L\rVert\lVert\Delta\theta\rVert$; for a fixed step length, the decrease is largest when $\Delta\theta$ points in the same direction as the negative gradient, which is why the negative gradient is the "steepest descent" direction
-- Update rule: $\theta_{t+1}=\theta_t-\eta\nabla_\theta L(\theta_t)$
-- Role of the learning rate: the Taylor expansion only holds locally; if the gradient of $L$ is $L$-Lipschitz (smooth), then $\eta<\frac{2}{L}$ guarantees that the loss decreases at every step; a learning rate that is too large causes oscillation or even divergence, while one that is too small converges very slowly
-- Limitations: for convex functions it converges to the global optimum; for non-convex functions such as neural networks, it is only guaranteed to converge to a stationary point (a local minimum or a saddle point)
+- **The gradient is the direction in which the function rises fastest at the current point, so a small step along the negative gradient always lowers the loss (as long as the gradient is nonzero and the step is small enough).**
+- The principle is the first-order Taylor expansion: locally the function is roughly linear, and stepping along the negative gradient changes the loss by about minus "learning rate x squared gradient norm", which is negative.
+- Among all directions with a fixed step length, the negative gradient decreases the loss the most, hence "steepest descent".
+- If the learning rate is too large, the local linear approximation breaks down and training oscillates or diverges; if too small, convergence is very slow.
+- For convex functions it converges to the global optimum; for non-convex functions such as neural networks it is only guaranteed to reach a stationary point (local minimum or saddle point).
+- Key formula: $\theta_{t+1}=\theta_t-\eta\nabla_\theta L(\theta_t)$
 
 Q16: **What are the principles of the Adam and SGD optimizers, and how do they differ?**
 
-- **SGD**: each step updates with the gradient of one mini-batch, $\theta_{t+1}=\theta_t-\eta g_t$; it is often combined with momentum (SGD with Momentum): $v_t=\mu v_{t-1}+g_t$, $\theta_{t+1}=\theta_t-\eta v_t$; momentum accumulates the historical gradient direction, damping oscillations and accelerating progress through flat regions
-- **Adam**: combines Momentum (first moment) and RMSProp (second moment) to adapt the learning rate for each parameter:
-
-$$
-m_t=\beta_1 m_{t-1}+(1-\beta_1)g_t,\quad v_t=\beta_2 v_{t-1}+(1-\beta_2)g_t^2
-$$
-
-$$
-\hat{m}_t=\frac{m_t}{1-\beta_1^t},\quad \hat{v}_t=\frac{v_t}{1-\beta_2^t},\quad \theta_{t+1}=\theta_t-\frac{\eta\,\hat{m}_t}{\sqrt{\hat{v}_t}+\epsilon}
-$$
-
-- The bias correction compensates for $m_t,v_t$ being too small early on because they are initialized to 0; defaults are $\beta_1=0.9,\beta_2=0.999,\epsilon=10^{-8}$
-- Differences:
-    - Learning rate: SGD uses the same global learning rate for all parameters; Adam scales the step size of each parameter adaptively according to the second moment of its gradient, giving smaller steps to parameters with large gradients and larger steps to sparse/small-gradient parameters
-    - Convergence speed and tuning: Adam converges quickly and is insensitive to the learning rate, suiting sparse gradients and tasks such as NLP/Transformers; SGD converges slowly, is sensitive to the learning rate and its schedule, and needs careful tuning
-    - Generalization: SGD (+Momentum) tends to converge to flatter minima and usually generalizes better on CV tasks (e.g. ResNet on ImageNet); Adam may generalize slightly worse (see Q5)
-    - Memory: Adam must store two extra states $m_t,v_t$ per parameter, roughly 3x the memory of SGD (in terms of parameter count); SGD+Momentum only stores one momentum buffer
-    - Weight decay: in Adam, L2 regularization is coupled with the adaptive learning rate and works poorly; AdamW decouples weight decay ($\theta\leftarrow\theta-\eta\lambda\theta$) and is currently the common choice for training large models
+- **SGD updates parameters with the mini-batch gradient times one global learning rate, usually with momentum to smooth the direction; Adam adds, on top of momentum (first moment), a moving average of squared gradients (second moment) to scale each parameter's step individually, with bias correction.**
+- Learning rate: SGD shares one learning rate across all parameters; Adam gives small steps to large-gradient parameters and large steps to sparse/small-gradient ones.
+- Convergence and tuning: Adam converges fast and is insensitive to the learning rate, suiting NLP/Transformers; SGD converges slowly and is more sensitive to the learning rate and its schedule.
+- Generalization: SGD + Momentum tends to reach flatter minima and usually generalizes better on CV tasks (e.g. ResNet on ImageNet) (see Q5).
+- Memory and weight decay: Adam stores two extra states $m_t, v_t$ per parameter, about 3x the parameter count in memory; AdamW decouples weight decay from the adaptive step and is the common choice for training large models.
+- Key formula (Adam): $\theta_{t+1}=\theta_t-\dfrac{\eta\,\hat{m}_t}{\sqrt{\hat{v}_t}+\epsilon}$, where $\hat m_t,\hat v_t$ are the bias-corrected first and second moments

@@ -2,150 +2,113 @@
 
 Q1: ***What is RAG (retrieval-augmented generation)? Why is it needed?***
 
-- RAG (Retrieval-Augmented Generation) **retrieves relevant content from an external knowledge base** before generation, places the retrieved results into the prompt, and lets the LLM answer based on that content.
-- Problems it solves:
-    - The model's knowledge has a **cutoff date** and cannot access the latest information;
-    - The model does not know **private/domain data**;
-    - It reduces **hallucinations** and can provide **source citations**;
-    - Compared with fine-tuning, updating knowledge only requires updating the index — cheap, controllable and deletable.
+- **RAG retrieves relevant content from an external knowledge base before generation and puts it into the prompt, so the LLM answers based on that content.**
+- It works around the model's knowledge cutoff and gives access to private or domain data the model doesn't know.
+- It reduces hallucination and lets the answer cite sources.
+- Compared with fine-tuning, updating knowledge just means updating the index: cheap, controllable and deletable.
 
 Q2: ***Describe a typical RAG pipeline***
 
-- **Offline indexing**:
-    1. Load and parse documents (PDF, HTML, tables, etc.);
-    2. Clean and **chunk** them;
-    3. Encode each chunk into a vector with an embedding model;
-    4. Store the vectors in a vector database (a keyword inverted index and metadata can be built at the same time).
-- **Online querying (retrieval & generation)**:
-    1. Query rewriting/expansion;
-    2. Retrieve the top-K candidates (vector retrieval + keyword retrieval);
-    3. **Rerank** and filter;
-    4. Concatenate the retrieved chunks with the question into the prompt, and have the LLM generate an answer with citations.
+- **It has an offline indexing part and an online query part: offline, documents are chunked, embedded and stored; online, relevant chunks are retrieved, reranked and passed with the question to the LLM.**
+- Offline: parse documents → clean and chunk → embed → store in a vector database (optionally with a keyword index and metadata).
+- Online: rewrite the query → vector + keyword retrieval of top-K → rerank and filter → put into the prompt and generate an answer with citations.
 
 Q3: ***What are common chunking strategies? How do you choose the chunk size?***
 
-- Strategies:
-    - **Fixed-length chunking**: split by token count, with **overlap** to avoid cutting through meaning;
-    - **Recursive/structural chunking**: recursively split along natural boundaries such as paragraphs, headings and sentences;
-    - **Semantic chunking**: determine boundaries from changes in the embedding similarity of adjacent sentences;
-    - **Document-structure-aware**: split by structure such as Markdown headings, code functions or table rows;
-    - **Contextual chunking**: use an LLM to generate, for each chunk, a prefix describing its position/meaning within the whole document, then embed and index it, mitigating the problem of chunks losing their context.
-- Chunk size trade-offs:
-    - **Too small**: incomplete meaning, lack of context;
-    - **Too large**: introduces noise, dilutes the embedding, and occupies context.
-- In practice, start from a few hundred tokens and tune with an evaluation set; you can also use **"retrieve small chunks, return large chunks"** (e.g. parent-document retrieval) to balance retrieval precision and contextual completeness.
+- **Common strategies are fixed-length with overlap, structural splitting by paragraphs or headings, semantic chunking, and contextual chunking where an LLM adds a context prefix to each chunk; size usually starts at a few hundred tokens and is tuned on an eval set.**
+- Chunks that are too small lack meaning; too large adds noise, dilutes the embedding and uses up context.
+- Structure-aware splitting (Markdown headings, code functions, table rows) usually beats hard cuts.
+- "Retrieve small, return large" (parent-document retrieval) balances retrieval precision and context completeness.
 
 Q4: ***What role does the embedding model play in RAG? How do you choose one?***
 
-- An embedding model maps text to dense vectors so that **semantically similar texts are close in vector space**, typically measured by cosine similarity $\cos(q,d)=\frac{q\cdot d}{\|q\|\|d\|}$.
-- A **bi-encoder (two-tower)** architecture is usually used: queries and documents are encoded separately, and document vectors can be precomputed offline, making retrieval fast.
-- Selection considerations: domain and language fit, maximum input length, vector dimension (storage and speed), multilingual ability, and retrieval evaluation results on your own data (not just public leaderboards);
-- If necessary, **fine-tune the embedding model** on domain data.
+- **The embedding model maps text to dense vectors so that semantically similar texts are close in vector space, enabling semantic retrieval.**
+- It is usually a bi-encoder: queries and documents are encoded separately, so document vectors can be precomputed offline and retrieval is fast.
+- Choose by domain and language fit, max input length, vector dimension, multilingual ability, and above all retrieval evaluation on your own data rather than leaderboards.
+- Fine-tune on domain data if needed.
+- Key formula: $\cos(q,d)=\frac{q\cdot d}{\|q\|\|d\|}$
 
 Q5: ***How is vector retrieval accelerated? What is ANN?***
 
-- Exact nearest-neighbor search has complexity $O(N)$, which is too slow at scale, so **approximate nearest neighbor (ANN)** algorithms are used, trading a small loss in recall for a large speedup.
-- Common indexes:
-    - **HNSW**: based on hierarchical navigable small-world graphs; fast with high recall, but memory-hungry;
-    - **IVF**: cluster first, and at query time search only the nearest few clusters;
-    - **PQ (product quantization)**: compresses vectors to save memory, often combined with IVF.
-- Common tools: FAISS, Milvus, Qdrant, Weaviate, pgvector, Elasticsearch/OpenSearch, etc.
+- **Exact nearest-neighbor search compares against every vector, which is too slow at scale, so approximate nearest neighbor (ANN) trades a little recall for a large speedup.**
+- HNSW: a hierarchical graph index; fast with high recall, but memory-heavy.
+- IVF: cluster first and search only the nearest clusters; PQ: compress vectors to save memory, often combined with IVF.
+- Common tools: FAISS, Milvus, Qdrant, Weaviate, pgvector, Elasticsearch, etc.
 
 Q6: ***What is hybrid search? Why is it needed?***
 
-- It combines **sparse retrieval (keywords, e.g. BM25)** with **dense retrieval (vectors)**.
-- Reasons:
-    - Vector retrieval is good at semantic matching and paraphrases, but weaker at exact matching of **proper nouns, IDs, code and rare words**;
-    - BM25 is good at exact keyword matching but does not understand semantics.
-- Fusion methods:
-    - **Weighted sum** (requires score normalization);
-    - **RRF (Reciprocal Rank Fusion)**: $score(d)=\sum_{i}\frac{1}{k+rank_i(d)}$, which depends only on ranks, needs no score calibration, and is simple and robust.
+- **Hybrid search combines keyword retrieval (e.g. BM25) with vector retrieval because they complement each other: vectors handle semantics and paraphrase, BM25 handles exact matches like proper nouns, IDs and code.**
+- Fusion can be a weighted sum of normalized scores, or more commonly RRF.
+- RRF depends only on ranks and needs no score calibration, so it is simple and robust.
+- Key formula: $score(d)=\sum_{i}\frac{1}{k+rank_i(d)}$
 
 Q7: ***What is reranking? Why does it improve results?***
 
-- First use a fast retriever to recall many candidates (e.g. top 50–100), then use a more fine-grained model to rescore them and select the top K to send to the LLM.
-- A **cross-encoder** is commonly used: the query and document are **concatenated** and fed into the model together for full cross-attention, which judges relevance far more accurately than a bi-encoder, but is computationally expensive and only suitable for a small number of candidates.
-- An LLM can also be used for reranking (listwise/pointwise).
-- In essence it is a **two-stage "recall then precision ranking"**: the first stage optimizes recall, the second optimizes precision.
+- **A fast retriever first recalls many candidates (e.g. top 50-100), then a finer model rescores them to pick the top-K: a two-stage "recall then precision" setup.**
+- Usually a cross-encoder: query and document are fed in together with full cross-attention, which is far more accurate than a bi-encoder.
+- It is expensive, so it is only applied to a few candidates; an LLM can also be used as the reranker.
 
 Q8: ***What query-side optimizations are there?***
 
-- **Query rewriting**: rewrite colloquial, multi-turn questions containing references into self-contained retrieval queries;
-- **Multi-query**: generate several differently phrased queries, retrieve for each and merge the results;
-- **Query decomposition**: split a complex question into several sub-questions and retrieve for each;
-- **HyDE**: have the LLM generate a hypothetical answer first and retrieve with its embedding;
-- **Metadata filtering**: filter by fields such as time, source and permissions;
-- **Step-back prompting**: first retrieve more abstract background knowledge.
+- **The core idea is to turn the user's raw question into queries better suited for retrieval: rewrite, expand, decompose and filter.**
+- Query rewriting: turn a colloquial, multi-turn question with references into a standalone query.
+- Multi-query and decomposition: retrieve with several phrasings and merge, or split complex questions into sub-questions.
+- HyDE: have the LLM write a hypothetical answer and retrieve with its embedding; step-back: retrieve more abstract background first.
+- Metadata filtering by time, source or permissions.
 
 Q9: ***How do you evaluate a RAG system?***
 
-- **Retrieval level**: Recall@K, Precision@K, MRR, nDCG — measuring whether relevant documents are retrieved and ranked near the top;
-- **Generation level**:
-    - **Faithfulness/groundedness**: whether the answer is supported by the retrieved content, with no hallucination;
-    - **Answer relevance**: whether it answers the question;
-    - **Correctness**: compared against a reference answer;
-    - **Citation accuracy**: whether citations actually support the corresponding claims;
-- Methods: build a labeled QA evaluation set and combine human evaluation with LLM-as-judge; frameworks such as Ragas implement common metrics.
-- **Diagnose separately** whether a failure is in retrieval or in generation.
+- **Evaluate the retrieval and generation layers separately, so you can tell whether a failure is "not retrieved" or "retrieved but used badly".**
+- Retrieval: Recall@K, Precision@K, MRR, nDCG.
+- Generation: faithfulness (supported by retrieved content), answer relevance, correctness, citation accuracy.
+- Method: a labeled QA eval set, combining human review and LLM-as-judge (frameworks like Ragas implement common metrics).
 
 Q10: ***What is agentic RAG? How does it differ from traditional RAG?***
 
-- **Traditional RAG**: a fixed pipeline that retrieves once per query and uses the results directly for generation.
-- **Agentic RAG**: retrieval becomes a **tool** of the agent, and the model decides:
-    - Whether retrieval is needed, what to retrieve, and which data source to use (vector store, SQL, web search, grep over a codebase, etc.);
-    - Whether the information is sufficient based on the results, and if not, **rewrites the query and does multi-hop retrieval**;
-    - How to verify and synthesize the retrieved results.
-- Pros: handles multi-hop, complex questions and is highly adaptive; cons: higher latency and cost, and less predictable behavior.
-- In scenarios such as code, agents often use **"just-in-time retrieval" like grep/file browsing** to replace or complement a prebuilt vector index.
+- **Traditional RAG is a fixed pipeline that retrieves once and generates; agentic RAG makes retrieval a tool, and the model decides whether to retrieve, what, from which source, and whether the results are enough.**
+- If not enough, it can rewrite queries, do multi-hop retrieval, and verify and synthesize results.
+- Pros: handles multi-hop, complex questions; cons: higher latency and cost, less predictable.
+- In settings like code, agents often use just-in-time retrieval such as grep and file browsing instead of, or alongside, a vector index.
 
 Q11: ***With long-context models, is RAG still necessary?***
 
-- Yes, but the two are **complementary**:
-    - Knowledge bases are often far larger than the context window;
-    - Stuffing large amounts of content into the context is **costly and slow**;
-    - With very long contexts, the model's ability to use information in the middle degrades (the **"Lost in the Middle"** phenomenon), and noise interferes with reasoning;
-    - RAG makes **access control, real-time updates and citation tracing** easier.
-- Long context lowers the precision requirement on retrieval: you can retrieve more and larger chunks and let the model filter them itself.
+- **Yes; the two are complementary.**
+- Knowledge bases are usually far larger than the context window, and stuffing everything in is expensive and slow.
+- With very long contexts, models use middle information poorly (Lost in the Middle), and noise hurts reasoning.
+- RAG makes access control, real-time updates and citation easy; long context lowers the precision bar for retrieval, so you can retrieve more and let the model filter.
 
 Q12: ***How should an agent's long-term memory be designed?***
 
-- **Writing**: decide what to remember — user preferences, key facts, task conclusions, lessons learned; the agent can write actively via a "memory tool", or a background process can **extract and summarize** after the session ends.
-- **Storage**: vector stores (semantic retrieval), key-value/relational databases (structured facts), knowledge graphs (entity relations), files (e.g. Markdown notes).
-- **Retrieval**: score by a combination of relevance, recency and importance, and bring the results back into the context.
-- **Updating and forgetting**: handle conflicts and stale information (new facts overwrite old ones), deduplicate, merge, and set expiration policies.
-- **Privacy and security**: users can view and delete memories; prevent malicious instructions from being injected via memory and prevent cross-user leakage.
+- **Design four stages well, writing, storage, retrieval, and updating/forgetting, while ensuring privacy and safety.**
+- Writing: store user preferences, key facts, task conclusions and lessons; the agent can write via a memory tool, or a background process can extract and summarize after a session.
+- Storage: vector store, key-value/relational database, knowledge graph or file notes, chosen by data shape.
+- Retrieval: score by relevance, recency and importance; updating: resolve conflicts, dedupe and merge, set expiry.
+- Safety: users can view and delete memories; prevent malicious instructions injected via memory and cross-user leakage.
 
 Q13: ***What is context window management? What are common strategies?***
 
-- As the agent loop runs, conversation history and tool results keep accumulating and will eventually exceed the context window or degrade performance, so they must be actively managed.
-- Common strategies:
-    - **Sliding window**: keep only the last N turns; simple but loses early information;
-    - **Summarization/compaction**: when the context approaches its limit, have the model summarize the history into a concise summary and continue working in a new context seeded with it;
-    - **Tool result clearing**: delete or replace old tool results that have already been processed;
-    - **External memory/notes**: the agent writes progress, plans and key findings to files (e.g. `NOTES.md`, a to-do list) and reads them back when needed;
-    - **Subagents**: hand subtasks requiring heavy exploration to subagents that return only distilled results;
-    - **On-demand retrieval**: keep only references (file paths, URLs) and load the content when needed.
+- **As the agent loop runs, history and tool results pile up until they overflow the window or degrade performance, so you must actively control what stays in context.**
+- Sliding window: keep only the last N turns; simple but loses early information.
+- Compaction: near the limit, summarize history and continue in a fresh context from the summary.
+- Clear old tool results; write progress and plans to external notes (e.g. `NOTES.md`) and read them back when needed.
+- Subagents isolate heavy exploration and return only distilled results; store only references (paths, URLs) and load on demand.
 
 Q14: ***What information should be kept during context compaction? What are the risks?***
 
-- Keep: the user's original goal and constraints, key decisions made and the reasons for them, current progress and the next steps, unresolved issues/errors, and important file paths or identifiers.
-- Discard: redundant raw tool output, intermediate attempts that have been resolved, duplicated content.
-- Risks:
-    - **Information loss**: the summary omits details that only later turn out to be important;
-    - Over-compression causes the model to redo work it has already done;
-- Mitigation: keep retrievable raw records (logs/files), explicitly list what must be kept in the compaction prompt, and tune the compaction strategy through evaluation.
+- **Keep the original goal and constraints, key decisions and their reasons, current progress and next steps, open issues, and important file paths and identifiers; redundant tool output and resolved intermediate attempts can go.**
+- The main risk is information loss: the summary drops a detail that later turns out to matter, or the model redoes work already done.
+- Mitigation: keep the raw logs/files for lookup, list must-keep items explicitly in the compaction prompt, and tune the strategy with evals.
 
 Q15: ***What are common problems in RAG, and how are they solved?***
 
-- **Nothing relevant is retrieved**: improve chunking, use hybrid search, rewrite queries, fine-tune embeddings;
-- **Retrieved but ranked low**: add a reranker;
-- **Retrieved but the model ignores/misuses it**: improve the prompt by requiring answers grounded in the context with citations; reduce noisy chunks;
-- **Poor document parsing quality**: tables, images and multi-column PDFs need specialized parsing (layout analysis, OCR, multimodal models);
-- **Knowledge conflicts/staleness**: add time metadata and prefer the latest version;
-- **Permission leakage**: filter by user permissions at the retrieval stage (document-level ACLs).
+- **Common problems by stage: not retrieved, ranked too low, retrieved but misused, poor document parsing, outdated or conflicting knowledge, and permission leaks.**
+- Not retrieved: better chunking, hybrid search, query rewriting, fine-tuned embeddings; ranked too low: add a reranker.
+- Misused: prompt the model to answer from the context with citations, and reduce noisy chunks.
+- Poor parsing: use layout analysis, OCR or multimodal models for tables, images and multi-column PDFs; outdated: add time metadata and prefer the latest version.
+- Permissions: filter by user permissions (document-level ACL) at retrieval time.
 
 Q16: ***What is GraphRAG? What scenarios is it suited for?***
 
-- GraphRAG first uses an LLM to **extract entities and relations from documents to build a knowledge graph**, runs community detection and hierarchical summarization on the graph, and combines graph structure and summaries at retrieval time.
-- Suitable scenarios: **global, cross-document synthesis questions** (e.g. "what are the main themes of these reports?") and multi-hop relational reasoning.
-- Downsides: building the graph is expensive and updating it is complex; for simple fact lookups, traditional vector RAG is usually sufficient.
+- **GraphRAG uses an LLM to extract entities and relations from documents into a knowledge graph, runs community detection and hierarchical summarization, and retrieves using both the graph structure and the summaries.**
+- It suits global, cross-document questions (e.g. "what are the main themes of these reports") and multi-hop relational reasoning.
+- Downsides: building the graph is expensive and updates are complex; for simple fact lookup, ordinary vector RAG is usually enough.

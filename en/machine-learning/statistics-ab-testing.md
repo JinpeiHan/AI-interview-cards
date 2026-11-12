@@ -4,262 +4,196 @@
 
 Q1: ***Describe the general framework of hypothesis testing***
 
-- **Null hypothesis** $H_0$ (usually "no effect / no difference") vs. **alternative hypothesis** $H_1$. The logic is proof by contradiction: assume $H_0$ is true and ask how "unusual" the observed data would be.
-- General steps:
-    1. State $H_0$ and $H_1$; decide between a one-sided and a two-sided test;
-    2. Fix the **significance level** $\alpha$ in advance (commonly 0.05);
-    3. Choose a **test statistic** (e.g. $z$, $t$, $\chi^2$) whose distribution under $H_0$ is known;
-    4. Compute the statistic and the p-value from the sample (or compare with a critical value);
-    5. If $p<\alpha$, **reject** $H_0$; otherwise **fail to reject** $H_0$ (note: this is not "accepting $H_0$").
-- Follow-up: $\alpha$, the sample size and the test should all be decided **before** looking at the data, otherwise you invite p-hacking.
+- **Hypothesis testing is a proof by contradiction: assume there is no effect (the null hypothesis $H_0$), then ask how unusual the observed data would be under that assumption; if unusual enough, reject $H_0$.**
+- Steps: state $H_0$/$H_1$ and choose one- or two-sided → fix the significance level $\alpha$ in advance (commonly 0.05) → pick a test statistic (z, t, chi-square) → compute the p-value → reject $H_0$ if $p<\alpha$.
+- A non-significant result only means "fail to reject $H_0$", not "accept $H_0$".
+- $\alpha$, the sample size and the test must be decided before looking at the data; otherwise it is p-hacking.
 
 Q2: ***What does a p-value actually mean? What are the common misreadings?***
 
-- **Definition**: assuming $H_0$ is true, the probability of obtaining a test statistic **at least as extreme** as the one observed: $p=P(|T|\ge|t_{obs}|\mid H_0)$.
-- Common misreadings:
-    - "The p-value is the probability that $H_0$ is true" -- the p-value is $P(\text{data}\mid H_0)$, not $P(H_0\mid \text{data})$; the latter requires a prior (Bayesian).
-    - "$1-p$ is the probability that $H_1$ is true".
-    - "A smaller p-value means a bigger effect" -- the p-value depends on both effect size and sample size; with a huge sample a tiny effect is significant. Always report the **effect size and confidence interval** too.
-    - "$p>0.05$ means there is no difference" -- the test may simply be underpowered.
-    - "p=0.05 means a 5% false positive rate" -- the share of false positives among significant results (FDR) also depends on the prior fraction of true effects and on power.
-- Under $H_0$ the p-value is **uniformly distributed** on $[0,1]$ -- this is the key to understanding peeking and multiple comparisons.
+- **The p-value is the probability, assuming $H_0$ is true, of seeing data at least as extreme as what was observed. It measures how incompatible the data are with $H_0$; it is not the probability that $H_0$ is true.**
+- Misreading 1: the p-value is the probability that $H_0$ is true -- that is $P(H_0\mid\text{data})$, which needs a prior.
+- Misreading 2: a smaller p means a bigger effect -- the p-value depends on both effect size and sample size; with enough data a tiny effect is significant, so always report the effect size and confidence interval too.
+- Misreading 3: $p>0.05$ means no difference -- the test may simply be underpowered.
+- Under $H_0$ the p-value is uniform on $[0,1]$, which is exactly why repeated peeking and multiple comparisons create false positives.
 
 Q3: ***Explain Type I error, Type II error and statistical power***
 
+- **A Type I error is calling an effect when there is none (false positive, probability $\alpha$); a Type II error is missing an effect that exists (false negative, probability $\beta$); power $1-\beta$ is the probability of detecting a real effect.**
+
 | | $H_0$ true | $H_1$ true |
 |---|---|---|
-| Reject $H_0$ | **Type I error** (false positive), probability $\alpha$ | Correct, probability $1-\beta$ (**power**) |
-| Do not reject $H_0$ | Correct, probability $1-\alpha$ | **Type II error** (false negative), probability $\beta$ |
+| Reject $H_0$ | Type I error ($\alpha$) | Correct (power $1-\beta$) |
+| Do not reject $H_0$ | Correct | Type II error ($\beta$) |
 
-- **Power** $=1-\beta$: the probability of detecting an effect when it truly exists; A/B tests usually require 80%.
-- Factors that increase power: larger effect size, larger sample size, smaller variance, larger $\alpha$.
-- At a fixed sample size, $\alpha$ and $\beta$ trade off; only more samples or lower variance can reduce both at once.
+- A/B tests usually require 80% power.
+- Larger effects, more samples, lower variance and a looser $\alpha$ all increase power.
+- At a fixed sample size $\alpha$ and $\beta$ trade off; reducing both requires more samples or lower variance.
 
 Q4: ***How should a confidence interval be interpreted? How does it relate to hypothesis testing?***
 
-- 95% confidence interval: if we **repeated the sampling** many times and built an interval the same way each time, about 95% of those intervals would contain the true parameter.
-- Misreading: "There is a 95% probability that the true parameter lies in this interval" -- in the frequentist view the parameter is fixed, so a specific interval either contains it or not; that statement describes a Bayesian **credible interval**.
-- Interval for a difference in means: $(\bar x_B-\bar x_A)\pm z_{1-\alpha/2}\sqrt{\frac{s_A^2}{n_A}+\frac{s_B^2}{n_B}}$.
-- **Duality**: a two-sided test rejects $H_0:\delta=0$ at level $\alpha$ ⇔ the $1-\alpha$ confidence interval excludes 0. The interval carries more information than a single p-value (effect size and uncertainty).
+- **A 95% confidence interval means: if we repeated the sampling many times and built an interval the same way each time, about 95% of those intervals would cover the true parameter. It does not mean "the true value has a 95% chance of lying in this interval" -- that is the Bayesian credible interval.**
+- In the frequentist view the parameter is fixed; a specific interval either contains it or it does not.
+- Duality: a two-sided test is significant at level $\alpha$ exactly when the $1-\alpha$ confidence interval excludes 0.
+- A confidence interval carries more information than a single p-value: it shows both how big the effect is and how uncertain it is.
 
 Q5: ***What is the Central Limit Theorem (CLT)? Why does it matter for A/B testing?***
 
-- **CLT**: for i.i.d. $X_1,\dots,X_n$ with mean $\mu$ and variance $\sigma^2<\infty$, $\frac{\bar X-\mu}{\sigma/\sqrt n}\xrightarrow{d}\mathcal N(0,1)$.
-- Why it matters: most business metrics (revenue, time spent) are **not normal themselves**, but their **sample means** are approximately normal, so we can use z-/t-tests on mean differences and build confidence intervals.
-- Caveats:
-    - Heavy-tailed distributions (e.g. revenue, a few "whale" users) converge slowly; they need larger samples, **winsorizing/capping**, or a log transform;
-    - Samples must be independent -- if the randomization unit is the user but the analysis unit is the session/page view, observations are not independent; use the delta method or cluster-robust standard errors;
-    - The CLT fails when the variance is infinite (e.g. the Cauchy distribution).
+- **The CLT says that for i.i.d. samples with finite variance, the sample mean is approximately normal once the sample is large enough. So even if metrics like revenue or time spent are highly skewed, their difference in means can still be analyzed with z/t tests and confidence intervals.**
+- Heavy-tailed metrics (a few "whale" users) converge slowly and need larger samples, or capping / log transforms.
+- The CLT requires independent observations; randomizing by user but analyzing by session/page view makes observations correlated, so use the delta method or cluster-robust standard errors.
+- The CLT fails when the variance is infinite (e.g. the Cauchy distribution).
 
 ## Common Tests
 
 Q6: ***What is the difference between a z-test and a t-test? What is Welch's t-test?***
 
-- **z-test**: population variance known, or sample size large (sample variance used as a proxy); the statistic is standard normal. Proportion metrics (conversion rate) commonly use the two-proportion z-test:
-  $$z=\frac{\hat p_B-\hat p_A}{\sqrt{\hat p(1-\hat p)\left(\frac1{n_A}+\frac1{n_B}\right)}}$$
-  where $\hat p$ is the pooled proportion.
-- **t-test**: population variance unknown and estimated from the sample; the statistic follows a t-distribution (depends on degrees of freedom, heavier tails than the normal). More accurate for small samples; as $n$ grows, t → normal.
-- **Student's t-test** assumes the two groups have **equal variances**; **Welch's t-test** does not:
-  $$t=\frac{\bar x_B-\bar x_A}{\sqrt{\frac{s_A^2}{n_A}+\frac{s_B^2}{n_B}}},\quad \nu\approx\frac{\left(\frac{s_A^2}{n_A}+\frac{s_B^2}{n_B}\right)^2}{\frac{(s_A^2/n_A)^2}{n_A-1}+\frac{(s_B^2/n_B)^2}{n_B-1}}$$
-  (Welch–Satterthwaite degrees of freedom). In practice **use Welch by default**: it loses almost no power when variances are equal and is more robust when they are not.
-- **Paired t-test**: two measurements on the same subject (before/after); run a one-sample t-test on the differences.
+- **A z-test is used when the variance is known or the sample is large, and the statistic is normal; a t-test estimates the variance from the sample, so the statistic follows a heavier-tailed t distribution. It is more accurate for small samples, and the two are nearly identical for large ones.**
+- Proportion metrics such as conversion rate commonly use the two-proportion z-test.
+- Student's t-test assumes equal variances in both groups; Welch's t-test drops that assumption and corrects the degrees of freedom.
+- In practice default to Welch: it loses almost no power when variances are equal and is more robust when they are not.
+- Paired t-test: for before/after measurements on the same subjects, run a one-sample t-test on the differences.
+- Key formula (Welch): $t=\dfrac{\bar x_B-\bar x_A}{\sqrt{s_A^2/n_A+s_B^2/n_B}}$
 
 Q7: ***When is the chi-square test used?***
 
-- **Test of independence**: whether two categorical variables are independent (e.g. a contingency table of experiment group × converted or not).
-- **Goodness-of-fit test**: whether observed counts match an expected distribution -- the **SRM check** in A/B testing is exactly this.
-- Statistic: $\chi^2=\sum\frac{(O_i-E_i)^2}{E_i}$, with $(r-1)(c-1)$ degrees of freedom (independence) or $k-1$ (goodness of fit).
-- Condition: expected counts generally at least 5; otherwise use **Fisher's exact test**.
+- **The chi-square test is for categorical data: a test of independence (e.g. is "group × converted" independent?) and a goodness-of-fit test (do observed counts match expected proportions? The SRM check in A/B testing is this case).**
+- It compares observed and expected counts; the bigger the gap, the bigger the statistic.
+- When expected counts are small (usually below 5), use Fisher's exact test instead.
 - For a 2×2 table the chi-square test is equivalent to the two-sided two-proportion z-test ($\chi^2=z^2$).
+- Key formula: $\chi^2=\sum\frac{(O_i-E_i)^2}{E_i}$
 
 Q8: ***When would you use the Mann-Whitney U test?***
 
-- A non-parametric test comparing two independent samples that **does not assume normality**; it is rank-based: pool both groups, rank the values, and compare rank sums.
-- Its null hypothesis is $P(X>Y)=P(Y>X)$ (stochastic dominance); it is **not strictly a test of equal medians** -- it can only be read as a median difference when the two distributions have the same shape and differ only by a shift.
-- Use cases: small samples, strong skew, outliers, ordinal data.
-- Drawback: it does not directly tell you "how much the mean increased", while the business usually cares about means (e.g. revenue per user); with large samples the t-test is already robust thanks to the CLT. Alternatives include the bootstrap or a t-test after a log transform.
+- **When the sample is small, strongly skewed, has outliers or is ordinal, so normality is a bad assumption, use the Mann-Whitney U test to compare two groups. It pools and ranks both groups and compares rank sums; it is a non-parametric test.**
+- It tests whether one group tends to be larger than the other; it can be read as a median difference only when both distributions have the same shape.
+- Downside: it does not tell you "how much the mean went up", while the business usually cares about means.
+- With large samples the t-test is already robust thanks to the CLT; other alternatives are the bootstrap or a t-test after a log transform.
 
 Q9: ***What is the bootstrap? When is it used?***
 
-- Idea: approximate the population distribution with the empirical distribution; resample the data **with replacement** to the same size $B$ times (e.g. 1000–10000), compute the statistic each time, and use the distribution of these statistics to estimate the standard error and confidence interval.
-- **Percentile interval**: take the 2.5% and 97.5% quantiles of the bootstrap statistics; BCa intervals are more accurate.
-- Use cases: statistics without a simple analytic standard error (median, quantiles, ratio metrics, AUC, etc.) or with a complicated distribution.
-- Caveats:
-    - Resample by the **randomization unit** (e.g. by user, not by event), otherwise the variance is underestimated;
-    - Works poorly for extreme quantiles, very small samples and heavy tails;
-    - Computationally expensive; large-scale experimentation platforms usually use the delta method instead.
-
-```python
-import numpy as np
-def bootstrap_ci(a, b, stat=np.mean, B=5000, alpha=0.05, seed=0):
-    rng = np.random.default_rng(seed)
-    diffs = [stat(rng.choice(b, len(b))) - stat(rng.choice(a, len(a))) for _ in range(B)]
-    return np.quantile(diffs, [alpha / 2, 1 - alpha / 2])
-```
+- **The bootstrap treats the sample as the population: resample it with replacement, at the same size, thousands of times, compute the statistic each time, and use the distribution of those results to estimate the standard error and confidence interval.**
+- It is used for statistics with no simple analytic variance, such as medians, quantiles, ratio metrics and AUC.
+- The simplest interval takes the 2.5% and 97.5% quantiles of the bootstrap results (percentile interval); BCa is more accurate.
+- Resample by the randomization unit (by user, not by event), otherwise the variance is underestimated.
+- It works poorly for extreme quantiles, tiny samples and heavy tails; it is also expensive, so large platforms often use the delta method instead.
 
 ## A/B Test Design
 
 Q10: ***How do you choose metrics for an A/B test? What are north-star and guardrail metrics?***
 
-- **North-star metric / OEC (Overall Evaluation Criterion)**: the core metric reflecting long-term product value, e.g. active-user retention, meaningful time spent per user; it should be **sensitive to business value, movable within the experiment window, and hard to game**.
-- **Primary (decision) metric**: the metric this experiment directly aims to improve, usually a measurable proxy for the north star, e.g. click-through rate or conversion rate.
-- **Guardrail metrics**: metrics that must not get worse, of two kinds:
-    - Business guardrails: revenue, retention, complaint rate, uninstall rate;
-    - Trustworthiness guardrails: **SRM**, page load latency, crash rate -- used to verify that the experiment itself is reliable.
-- Properties of a good metric: **sensitivity** (can detect change), **directionality** (aligned with long-term value), low variance; historical experiments or A/A tests can be used to assess a metric's variance and sensitivity.
-- Follow-up: when short-term metrics conflict with long-term value (e.g. more ads raise revenue but hurt retention), you need long-term holdouts or calibrated proxy metrics.
+- **The north-star metric (OEC) is the core metric reflecting long-term product value, such as retention or engaged time per user; guardrail metrics are metrics that must not get worse. Usually a short-term, measurable proxy of the north star is chosen as the primary decision metric for the experiment.**
+- Guardrails come in two kinds: business guardrails (revenue, retention, complaint rate) and trust guardrails (SRM, load latency, crash rate, which check that the experiment itself is reliable).
+- A good metric is sensitive (moves within the experiment window), aligned with long-term value, low-variance and hard to game; evaluate it with past experiments or A/A tests.
+- When short-term metrics conflict with long-term value (e.g. more ads raise revenue but hurt retention), calibrate with a long-term holdout.
 
 Q11: ***How do you choose the randomization unit?***
 
-- Common units: **user** (user id), device/cookie, session, page view, region/time slice (clusters).
-- Principles:
-    - **Consistent user experience**: user-visible changes (UI, recommendation policy) should be split by user so the same user does not flip between versions;
-    - **The randomization unit should equal or be coarser than the analysis unit**: if you split by user but analyze per page view (e.g. CTR = clicks/PV), observations are not independent and the naive variance formula underestimates the variance; use the **delta method** or a user-level bootstrap;
-    - **Interference / network effects**: when users influence each other, use coarser units (region, cluster, time slice);
-    - Finer units give more samples and higher power, but may cause inconsistent experiences and leakage.
-- Logged-out users can only be split by cookie/device, which suffers from one person using multiple devices.
+- **Usually randomize by user so each user gets a consistent experience. The rule is that the randomization unit should be the same as or coarser than the analysis unit, and when users influence each other, switch to a coarser unit (region, cluster, time slice).**
+- Randomizing by user but computing CTR per page view makes observations dependent; the naive variance is too small, so use the delta method or a user-level bootstrap.
+- Finer units (session, page view) give more samples and more power, but may create inconsistent experiences and leakage.
+- Logged-out users can only be split by cookie/device, which has the one-person-many-devices problem.
 
 Q12: ***How do you calculate the sample size for an A/B test? What is MDE?***
 
-- **MDE (Minimum Detectable Effect)**: the smallest effect the experiment can reliably detect at a given $\alpha$ and power; it should be set by **business significance** (how big a lift is worth shipping), not adjusted after the fact.
-- Two-sample comparison of means, sample size per group (two-sided):
-  $$n=\frac{(z_{1-\alpha/2}+z_{1-\beta})^2\cdot 2\sigma^2}{\delta^2}$$
-- With $\alpha=0.05$ and 80% power, $(1.96+0.84)^2\approx 7.85$, giving the rule of thumb $n\approx\frac{16\sigma^2}{\delta^2}$ (per group).
-- Proportion metrics: $\sigma^2=p(1-p)$. E.g. with a baseline conversion rate $p=10\%$ and a target absolute lift $\delta=0.5\%$: $n\approx 16\times0.09/0.005^2=57600$ per group.
-- Pattern: sample size is proportional to $\sigma^2$ and inversely proportional to $\delta^2$ -- halving the MDE requires **4×** the samples. This is why variance reduction (CUPED) directly shortens experiments.
+- **The MDE (minimum detectable effect) is the smallest effect the experiment can reliably detect at a given $\alpha$ and power; the business should set it as "the smallest lift worth shipping". Sample size is proportional to the metric variance and inversely proportional to the square of the MDE.**
+- Halving the MDE quadruples the sample size, which is why variance reduction (e.g. CUPED) directly shortens experiments.
+- For a proportion metric the variance is $p(1-p)$. Example: a 10% baseline conversion rate and a 0.5 percentage-point absolute lift need about 58,000 users per group.
+- Key formula (rule of thumb for $\alpha=0.05$, 80% power, per group): $n\approx\dfrac{16\sigma^2}{\delta^2}$
 
 Q13: ***How long should an experiment run? What are novelty and primacy effects?***
 
-- Duration = required sample size / daily traffic entering the experiment, but it must also:
-    - Cover at least **full weekly cycles** (usually 1–2 weeks or more) to remove day-of-week effects;
-    - Avoid holidays, big promotions and other unusual periods, or clearly state how far the results generalize;
-    - Be long enough to see **novelty/primacy effects** wear off.
-- **Novelty effect**: users engage more with a new feature in the short term simply because it is new; the effect decays over time, leading to overestimation.
-- **Primacy effect / change aversion**: existing users are used to the old version and perform worse at first, recovering only after adapting, leading to underestimation.
-- How to detect them: plot the **treatment effect over time**; analyze new vs. existing users separately (new users are not affected by either effect); analyze by days since first exposure (cohort); set up a long-term holdout if needed.
+- **Duration is roughly "required sample size ÷ daily traffic", but it should cover at least full weekly cycles (usually 1–2 weeks or more), avoid holidays and big promotions, and run long enough for novelty/primacy effects to fade.**
+- Novelty effect: users try a new feature more out of curiosity, then it wears off, so the effect is overestimated.
+- Primacy effect (change aversion): existing users dislike the new version at first and recover after adapting, so the effect is underestimated.
+- Detection: plot the treatment effect over time; look at new vs. existing users separately (new users are unaffected); analyze cohorts by first-exposure day; use a long-term holdout if needed.
 
 Q14: ***What is the "peeking" problem? How does sequential testing solve it?***
 
-- **Peeking**: repeatedly checking the p-value during the experiment and stopping as soon as $p<0.05$. Since the p-value wanders randomly over time under $H_0$, multiple looks are a form of multiple comparisons, and **the actual Type I error rate is far above 5%** (the more looks, the higher).
-- Solutions:
-    - **Fixed sample size**: compute the sample size in advance and only look at the end;
-    - **Group sequential testing**: pre-specify a number of interim analyses and allocate α with an **α-spending function** (O'Brien-Fleming, Pocock) -- O'Brien-Fleming boundaries are very strict early and close to the usual threshold at the end;
-    - **Always-valid inference**: e.g. mSPRT (mixture sequential probability ratio test) and confidence sequences, which allow looking at any time while controlling the error rate, at the cost of slightly lower power at any fixed time point;
-    - Bayesian methods are also affected by optional stopping in terms of their frequentist properties, so they do not fully avoid the problem.
+- **Peeking means checking the p-value repeatedly during the experiment and stopping as soon as it is significant. Under $H_0$ the p-value wanders randomly, so the more you look, the more likely you hit $p<0.05$ once, and the real false positive rate is far above 5%.**
+- Simplest fix: compute the sample size up front and only look at the end.
+- Group sequential tests: pre-plan a few interim analyses and allocate $\alpha$ with a spending function (e.g. O'Brien-Fleming, very strict early and close to the usual threshold at the end).
+- Always-valid inference (mSPRT, confidence sequences): look any time while keeping the error rate controlled, at the cost of slightly lower power.
+- Bayesian methods do not escape this either: stopping early on a posterior threshold also inflates the false positive rate.
 
 Q15: ***What is the multiple comparisons problem? How do Bonferroni and BH differ?***
 
-- When testing $m$ hypotheses at once (multiple metrics, multiple treatment arms, multiple segments), the probability of at least one false positive, $1-(1-\alpha)^m$, grows quickly (about 64% for $m=20$).
-- **FWER (family-wise error rate) control -- Bonferroni**: use threshold $\alpha/m$ for each test. Simple but very conservative; power drops sharply for large $m$. Improvement: the Holm step-down procedure (uniformly more powerful).
-- **FDR (false discovery rate) control -- Benjamini-Hochberg**: FDR = expected proportion of false positives among rejected hypotheses. Steps:
-    1. Sort p-values in ascending order $p_{(1)}\le\dots\le p_{(m)}$;
-    2. Find the largest $k$ such that $p_{(k)}\le\frac{k}{m}q$;
-    3. Reject the first $k$ hypotheses.
-- Choice: use FWER when a critical decision must strictly avoid any false positive; FDR is more appropriate for exploratory analysis (screening many metrics/segments).
-- Practice: pre-specify a **single primary metric**; treat others as secondary/exploratory; segment-level findings need replication.
+- **When testing many hypotheses at once (many metrics, arms or segments), the chance of at least one false positive grows fast (about 64% for 20 tests). Bonferroni controls the probability of any false positive (FWER) and is strict; BH controls the share of false positives among significant results (FDR), which is looser and has more power.**
+- Bonferroni: use threshold $\alpha/m$ for each test; simple but very conservative when $m$ is large. Holm's step-down method is a uniformly better refinement.
+- BH: sort p-values ascending, find the largest $k$ whose p-value is at most $\frac{k}{m}q$, and reject the first $k$.
+- Use FWER for critical launch decisions; use FDR for exploratory screening of many metrics/segments.
+- In practice, pre-register a single primary metric and treat others as secondary; segment findings need replication.
 
 Q16: ***What is SRM? How do you check for it?***
 
-- **SRM (Sample Ratio Mismatch)**: the actual group proportions deviate significantly from the designed ratio (e.g. designed 50/50, observed 50.8/49.2).
-- Check: chi-square goodness-of-fit test, $\chi^2=\sum\frac{(O_i-E_i)^2}{E_i}$; a very strict threshold (e.g. $p<0.001$) is commonly used for alerts.
-- SRM means **something is wrong with randomization or the data pipeline**; the results are untrustworthy and must be debugged before interpreting the effect. Common causes:
-    - Assignment bugs, hash collisions, the treatment page loading slower so that logging events are lost;
-    - Bot filtering applied unevenly across groups;
-    - Different triggering conditions in treatment (only some users counted in a triggered analysis);
-    - Changing the traffic allocation mid-experiment.
+- **SRM (sample ratio mismatch) is when the actual group sizes deviate significantly from the designed split, e.g. a 50/50 design that shows 50.8/49.2. It means the assignment or data pipeline is broken and the results cannot be trusted, so debug first before reading the effect.**
+- Check with a chi-square goodness-of-fit test, usually alerting only at a strict threshold (e.g. $p<0.001$).
+- Common causes: assignment bugs or hashing problems, a slower treatment page losing tracking events, bot filtering that differs between groups, different trigger conditions, changing the traffic split mid-experiment.
 
 Q17: ***What are network effects / interference? How do you handle them?***
 
-- A/B testing relies on **SUTVA** (Stable Unit Treatment Value Assumption): one unit's outcome is not affected by other units' assignments. It is violated in:
-    - **Social networks**: a treatment user's new feature affects the behavior of their friends (in control) → the effect is diluted or amplified;
-    - **Two-sided marketplaces** (ride-hailing, food delivery, ad auctions): treatment and control share supply/budget; treatment "steals" resources, so the effect is **overestimated**;
-    - Shared inventory, shared model training data (feedback loops).
-- Solutions:
-    - **Cluster randomization**: randomize by social-graph clusters (graph cluster randomization) or by geographic region;
-    - **Switchback experiments**: alternate the treatment on/off for an entire region by time slice; common in two-sided marketplaces;
-    - **Budget/resource splitting**: give treatment and control separate budgets or supply pools;
-    - Cost: fewer randomization units, higher variance, lower power.
+- **A/B testing assumes one user's outcome is not affected by other users' assignments (SUTVA). In social networks and two-sided marketplaces (ride-hailing, food delivery, ad auctions) this breaks: treatment affects control or grabs shared resources, so the effect is diluted or overestimated.**
+- Cluster randomization: split by social-graph clusters or by geographic region.
+- Switchback experiments: toggle treatment on and off for a whole region by time slice; common in two-sided marketplaces.
+- Resource isolation: give each group its own budget or supply pool.
+- Cost: fewer randomization units, so higher variance and lower power.
 
 Q18: ***What is CUPED? Why does it reduce variance?***
 
-- **CUPED** (Controlled-experiment Using Pre-Experiment Data, Microsoft 2013): adjust the metric $Y$ using a pre-experiment covariate $X$ (usually the same metric measured before the experiment):
-  $$Y_{cuped}=Y-\theta(X-\bar X),\quad \theta=\frac{\mathrm{Cov}(X,Y)}{\mathrm{Var}(X)}$$
-- Variance: $\mathrm{Var}(Y_{cuped})=\mathrm{Var}(Y)(1-\rho^2)$, where $\rho$ is the correlation between $X$ and $Y$. With $\rho=0.7$, variance drops by about 51%, roughly equivalent to doubling the sample size.
-- **Unbiasedness**: $X$ is pre-experiment data unaffected by the treatment, so both groups have the same expected $X$, and the adjustment does not change the expected treatment effect.
-- It is essentially equivalent to adding a pre-treatment covariate in a regression (ANCOVA / regression adjustment); extension: CUPAC uses an ML model's prediction as the covariate.
-- Note: the covariate must be **unaffected by the treatment**; for new users with no history, use other pre-experiment features or a missingness indicator.
+- **CUPED uses pre-experiment data (usually the same metric measured before the experiment) to explain away the part of the metric's variation that has nothing to do with the treatment, which lowers variance and shortens experiments. Because pre-experiment data are not affected by treatment, both groups have the same expectation and the adjustment introduces no bias.**
+- Variance shrinks by a factor of $1-\rho^2$, where $\rho$ is the correlation between the pre- and in-experiment metric; at $\rho=0.7$ the variance roughly halves, almost like doubling the sample.
+- It is essentially regression adjustment with a pre-treatment covariate; CUPAC uses an ML model's prediction as the covariate.
+- The covariate must be unaffected by treatment; for new users without history, use other pre-experiment features.
+- Key formula: $Y_{cuped}=Y-\theta(X-\bar X)$, $\theta=\mathrm{Cov}(X,Y)/\mathrm{Var}(X)$
 
 Q19: ***What are ratio metrics? Why do we need the delta method?***
 
-- **Ratio metric**: both numerator and denominator are random variables, e.g. CTR = total clicks / total impressions; when splitting by user, the analysis unit (impression) is finer than the randomization unit (user).
-- Multiple impressions from the same user are correlated, so the naive binomial variance $p(1-p)/N$ **underestimates the variance**, inflating false positives.
-- **Delta method**: a first-order Taylor expansion of $R=\bar Y/\bar X$ (where $\bar Y,\bar X$ are user-level means):
-  $$\mathrm{Var}\left(\frac{\bar Y}{\bar X}\right)\approx\frac{1}{\mu_X^2}\mathrm{Var}(\bar Y)+\frac{\mu_Y^2}{\mu_X^4}\mathrm{Var}(\bar X)-2\frac{\mu_Y}{\mu_X^3}\mathrm{Cov}(\bar Y,\bar X)$$
-  where variances and covariance are estimated at the user level (e.g. $\mathrm{Var}(\bar Y)=s_Y^2/n$).
-- The delta method is also used for confidence intervals of the **relative lift** $\frac{\bar Y_B}{\bar Y_A}-1$. Alternative: a user-level bootstrap.
+- **In a ratio metric both numerator and denominator are random, e.g. CTR = total clicks / total impressions. With user-level randomization, one user's many impressions are correlated, so the plain binomial variance underestimates the variance and inflates false positives; the delta method estimates the variance correctly at the user level.**
+- Idea of the delta method: take a first-order Taylor expansion of the ratio and approximate its variance from the user-level variances and covariance of numerator and denominator.
+- It is also used for confidence intervals on relative lift.
+- Alternative: a user-level bootstrap.
 
 Q20: ***What is Simpson's paradox? How does it show up in A/B testing?***
 
-- **Simpson's paradox**: B beats A in every subgroup, yet A beats B when the subgroups are combined (or vice versa). The cause is a **confounding variable** together with **different subgroup compositions** across groups.
-- Classic example: kidney stone treatment -- treatment A has a higher success rate for both small and large stones, but A was used more often for the harder large stones, so A's pooled success rate is lower.
-- Scenarios in A/B testing:
-    - **Changing the traffic allocation** mid-experiment (e.g. 1% on day 1, 50% on day 2) while baseline conversion differs by day;
-    - Segmenting by triggering conditions or post-treatment variables (segment membership affected by the treatment);
-    - Unbalanced traffic allocation across platforms/countries.
-- Remedies: keep the allocation fixed, or do a **stratified analysis** by day/stratum and reweight; segment only on **pre-experiment** attributes.
+- **Simpson's paradox is when B beats A in every subgroup, yet A beats B once the groups are pooled. It happens when there is a confounder and the two arms have different mixes across subgroups.**
+- Classic example: kidney stone treatment A is better for both small and large stones, but it was given mostly to hard large-stone cases, so its pooled cure rate is lower.
+- In A/B tests it typically appears when the traffic split changes mid-experiment (with different daily baselines), when segmenting by a variable affected by treatment, or with uneven allocation across platforms.
+- Remedies: keep the traffic split fixed, or analyze by stratum and reweight; segment only by pre-experiment attributes.
 
 ## Causal Inference and Bayesian Methods
 
 Q21: ***What is confounding? How do propensity score methods work?***
 
-- **Confounder**: a variable that affects both the treatment $T$ and the outcome $Y$, so that "correlation" is not "causation". Randomized experiments break confounding through random assignment; with observational data we must adjust for it.
-- Key assumptions: **ignorability** (given $X$, $T$ is independent of the potential outcomes, i.e. no unobserved confounding), **overlap/positivity** ($0<e(x)<1$), and SUTVA.
-- **Propensity score** $e(x)=P(T=1\mid X=x)$ (usually estimated with logistic regression/GBDT). Rosenbaum & Rubin showed that conditioning on $e(x)$ suffices to balance $X$.
-- Usage:
-    - **Matching (PSM)**: match each treated unit with control units of similar propensity score;
-    - **Inverse probability weighting (IPW)**: weight treated units by $1/e(x)$ and control units by $1/(1-e(x))$, $\widehat{ATE}=\frac1n\sum\left[\frac{T_iY_i}{e(x_i)}-\frac{(1-T_i)Y_i}{1-e(x_i)}\right]$;
-    - Stratification, or use as a regression covariate; **doubly robust (AIPW)** combines an outcome model and a propensity model and is consistent if either is correct.
-- Limitations: **cannot handle unobserved confounding**; weights explode when propensity scores approach 0/1, requiring trimming; check covariate balance after matching (standardized mean differences).
+- **A confounder affects both treatment and outcome, so correlation is not causation. Randomized experiments cut confounding by random assignment; with observational data, the propensity score (the probability of receiving treatment given features) can be used to make treated and control groups comparable.**
+- Uses: propensity score matching (PSM), inverse probability weighting (IPW, weighting treated units by $1/e(x)$), stratification; doubly robust AIPW combines an outcome model and a propensity model and is consistent if either is correct.
+- Assumptions: no unobserved confounding, overlap in features between groups, SUTVA.
+- Limits: cannot handle unobserved confounders; scores near 0 or 1 make weights explode and need trimming; always check covariate balance after adjustment.
 
 Q22: ***Explain Difference-in-Differences (DiD)***
 
-- Setting: randomization is impossible, but there is data for treatment and control groups **before and after** the treatment (e.g. a new policy launched in one city).
-- Estimator:
-  $$\hat\tau_{DiD}=(\bar Y_{T,post}-\bar Y_{T,pre})-(\bar Y_{C,post}-\bar Y_{C,pre})$$
-  The first difference removes fixed differences of the treated group; the second removes the common time trend.
-- Regression form: $Y_{it}=\beta_0+\beta_1\text{Treat}_i+\beta_2\text{Post}_t+\tau(\text{Treat}_i\times\text{Post}_t)+\epsilon_{it}$.
-- Core assumption: **parallel trends** -- absent treatment, both groups would have followed the same trend. Check pre-trends with multiple pre-treatment periods (event study).
-- Extensions/caveats: with staggered treatment timing (staggered adoption), traditional two-way fixed effects can be biased and newer estimators are needed (e.g. Callaway–Sant'Anna); when parallel trends fails, consider the **synthetic control method**.
+- **DiD is for cases where you cannot randomize but have treated and control groups observed before and after treatment: take the treated group's before-after change minus the control group's before-after change. The first difference removes fixed group differences, the second removes the shared time trend, and what remains is the treatment effect.**
+- The key assumption is parallel trends: without treatment both groups would have moved the same way; test it with an event study on multiple pre-periods.
+- In regression form, the treatment effect is the coefficient on the "treated × post" interaction.
+- With staggered treatment timing, classic two-way fixed effects can be biased and newer estimators (e.g. Callaway–Sant'Anna) are needed; if parallel trends fail, consider synthetic control.
+- Key formula: $\hat\tau=(\bar Y_{T,post}-\bar Y_{T,pre})-(\bar Y_{C,post}-\bar Y_{C,pre})$
 
 Q23: ***What is uplift modeling? How does it differ from a standard response model?***
 
-- A **standard response model** predicts $P(Y=1\mid X)$ -- who will buy; an **uplift model** predicts the **individual treatment effect (CATE)**: $\tau(x)=E[Y\mid T=1,X=x]-E[Y\mid T=0,X=x]$ -- who will buy **because of** the intervention.
-- Four user quadrants: persuadables (buy only if treated; the target), sure things (always buy; treatment wasted), lost causes (never buy), sleeping dogs (treatment makes them churn; avoid).
-- Methods (meta-learners):
-    - **S-learner**: one model with $T$ as a feature; predict $f(x,1)-f(x,0)$;
-    - **T-learner**: train separate models on treatment and control, take the difference;
-    - **X-learner**: suited to imbalanced treatment/control sample sizes;
-    - Also causal forests, trees that directly optimize uplift (split criteria based on treatment-effect differences), and the DR-learner.
-- Training data should ideally come from a **randomized experiment**; evaluation cannot use ordinary AUC (individual true uplift is unobservable); use **Qini curves / uplift curves**.
+- **A standard response model predicts who will buy; an uplift model predicts who will buy because of the intervention, i.e. the individual treatment effect. Marketing should target the latter, not people who would buy anyway.**
+- Four user types: persuadables (buy only if treated, the target), sure things (always buy, wasted spend), lost causes (never buy), sleeping dogs (treatment makes them churn, avoid).
+- Methods: S-learner (treatment as a feature), T-learner (one model per group, then subtract), X-learner (good when groups are imbalanced), causal forests and others.
+- Training data should ideally come from a randomized experiment; true individual uplift is unobservable, so ordinary AUC does not work -- use Qini / uplift curves.
 
 Q24: ***What is the difference between Bayesian and frequentist A/B testing?***
 
+- **Frequentists treat the parameter as fixed and output p-values and confidence intervals; Bayesians treat it as a random variable with a prior and directly output "the probability that B beats A" and the expected loss, which is more intuitive but depends on the prior.**
+
 | | Frequentist | Bayesian |
 |---|---|---|
-| Parameter | Fixed, unknown | Random variable with a prior |
-| Output | p-value, confidence interval | Posterior, $P(B>A\mid\text{data})$, expected loss |
-| Interpretation | Indirect (how unusual the data are under $H_0$) | Intuitive ("95% probability that B beats A") |
-| Prior | Not needed | Needed; affects results (especially with small samples) |
+| Output | p-value, confidence interval | posterior, $P(B>A)$, expected loss |
+| Interpretation | indirect | intuitive |
+| Prior | not needed | needed, matters most with small samples |
 
-- Classic approach for conversion rates: the **Beta-Binomial conjugate** model. With prior $\text{Beta}(\alpha,\beta)$ and $s$ successes in $n$ trials, the posterior is $\text{Beta}(\alpha+s,\beta+n-s)$; estimate $P(p_B>p_A)$ and the **expected loss** $E[\max(p_A-p_B,0)]$ via Monte Carlo sampling.
-- Misconception: "Bayesian methods let you peek freely" -- the posterior is still a valid Bayesian update under optional stopping, but its **frequentist error rate** is not controlled; with a rule like "stop when $P(B>A)>95\%$", the false positive rate inflates as well.
-- Practice: high-traffic platforms mostly use frequentist tests + sequential testing + variance reduction; Bayesian methods shine with low traffic, when intuitive decisions (expected loss) are needed, and when incorporating priors from past experiments.
-
-```python
-import numpy as np
-rng = np.random.default_rng(0)
-a = rng.beta(1 + conv_a, 1 + n_a - conv_a, 100_000)
-b = rng.beta(1 + conv_b, 1 + n_b - conv_b, 100_000)
-prob_b_better = (b > a).mean()
-expected_loss_b = np.maximum(a - b, 0).mean()
-```
+- Conversion rates commonly use the Beta-Binomial conjugate pair: the posterior is still a Beta distribution, and sampling gives $P(B>A)$ and the expected loss.
+- Misconception: Bayesian tests cannot be peeked at freely either -- "stop once $P(B>A)>95\%$" also inflates the false positive rate.
+- Large-traffic platforms mostly use frequentist tests + sequential testing + variance reduction; Bayesian methods suit low traffic, intuitive decision-making or incorporating priors from past experiments.

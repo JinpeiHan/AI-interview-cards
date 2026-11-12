@@ -4,320 +4,268 @@
 
 Q1: ***What is the difference between Boosting and Bagging?***
 
+**Bagging trains many independent strong learners in parallel and averages them, which mainly reduces variance. Boosting trains weak learners one after another, each correcting the previous errors, which mainly reduces bias.**
+
 | | Bagging (e.g. random forest) | Boosting (e.g. AdaBoost, GBDT) |
 |---|---|---|
-| Training | **Parallel**, base learners are independent | **Sequential**, each learner depends on the previous ones |
-| Sample usage | Bootstrap sampling with replacement | All samples, focusing on hard samples via weights/gradients |
-| Base learner | Strong learners (deep trees, low bias, high variance) | Weak learners (shallow trees, high bias, low variance) |
-| Main effect | **Reduces variance** | **Reduces bias** (also some variance reduction) |
-| Combination | Equal-weight averaging / voting | Weighted sum (additive model) |
-| Noise | Robust | Fairly sensitive, can fit noise/outliers |
+| Training | Parallel, independent | Sequential, depends on previous results |
+| Base learner | Deep trees (low bias, high variance) | Shallow trees (high bias, low variance) |
+| Main effect | Reduces variance | Reduces bias |
+| Noise | Robust | Fairly sensitive, can fit noise |
 
-- Intuition: Bagging is "several experts vote independently and you average"; Boosting is "one after another, each corrects the previous errors".
+- Intuition: Bagging is "several experts vote independently"; Boosting is "fix the mistakes one step at a time".
 
 Q2: ***Briefly explain how AdaBoost works.***
 
-- Binary classification $y\in\{-1,+1\}$, initialize sample weights $w_i = 1/N$. For $t=1,\dots,T$:
-    1. Train weak classifier $h_t$ with the current weights and compute the weighted error $\epsilon_t = \sum_i w_i \mathbb{I}(h_t(x_i)\ne y_i)$;
-    2. Compute classifier weight $\alpha_t = \frac{1}{2}\ln\frac{1-\epsilon_t}{\epsilon_t}$ (lower error means larger weight; $\alpha_t>0$ when $\epsilon_t<0.5$);
-    3. Update sample weights $w_i \leftarrow w_i \exp(-\alpha_t y_i h_t(x_i))$ and normalize, so **misclassified samples get larger weights**.
-- Final model $H(x)=\text{sign}\left(\sum_t \alpha_t h_t(x)\right)$.
-- Theoretical view: AdaBoost is equivalent to a **forward stagewise additive model** with **exponential loss** $L=\exp(-yF(x))$. Exponential loss penalizes misclassified samples exponentially, so AdaBoost is **sensitive to noise and outliers**. GBDT generalizes this idea to any differentiable loss.
+**AdaBoost trains weak classifiers in sequence. Each round it raises the weights of misclassified samples so the next classifier focuses on the hard ones. The final prediction is a weighted vote, where more accurate classifiers get more say.**
+
+- The lower a classifier's error rate, the larger its voting weight.
+- Misclassified samples get heavier, correctly classified ones lighter, then the weights are renormalized.
+- Theoretically it is a forward stagewise additive model with **exponential loss**. That loss punishes misclassified samples very hard, so AdaBoost is sensitive to noise and outliers.
+- Key formula (classifier weight): $\alpha_t = \frac{1}{2}\ln\frac{1-\epsilon_t}{\epsilon_t}$
 
 ## GBDT
 
 Q3: ***What is the core idea of GBDT? Why is it called "gradient descent in function space"?***
 
-- GBDT is an **additive model**: $F_M(x) = F_0(x) + \sum_{m=1}^{M}\nu\, h_m(x)$, where each $h_m$ is a regression tree trained one at a time by a forward stagewise algorithm.
-- At step $m$ we want $h_m$ minimizing $\sum_i L(y_i, F_{m-1}(x_i)+h_m(x_i))$. Treating the values of $F$ at each sample as "parameters", the **negative gradient** of the loss with respect to them is the steepest-descent direction:
-$$r_{im} = -\left[\frac{\partial L(y_i, F(x_i))}{\partial F(x_i)}\right]_{F=F_{m-1}}$$
-- Since the gradient is only available at training points, to generalize to new samples a regression tree is fitted to the **negative gradients** $\{(x_i, r_{im})\}$ (called **pseudo-residuals**), which amounts to projecting the gradient onto the "space of tree functions". Thus GBDT performs **gradient descent in function space**, mirroring parameter-space gradient descent $\theta \leftarrow \theta - \eta\nabla_\theta L$.
-- For squared loss $L=\frac12(y-F)^2$, the negative gradient is exactly the residual $y-F$, so "fitting residuals" is merely the special case of squared loss.
+**GBDT is an additive model that sums many regression trees. Each new tree fits the negative gradient of the loss for the current model. You can treat the whole prediction function as the parameter and take a small step along the negative gradient each round. That is why it is called gradient descent in function space.**
+
+- The negative gradient can only be computed at training points. Fitting a tree to it is what lets the model generalize to new samples.
+- Under squared loss the negative gradient is exactly the residual, so "fitting residuals" is just a special case.
+- Key formula (pseudo-residual): $r_{i} = -\partial L(y_i, F(x_i)) / \partial F(x_i)$
 
 Q4: ***Write out the GBDT algorithm.***
 
-1. Initialize $F_0(x)=\arg\min_\gamma \sum_i L(y_i,\gamma)$ (the mean for squared loss, the log-odds for log loss).
-2. For $m=1,\dots,M$:
-    1. Compute pseudo-residuals $r_{im} = -\partial L(y_i,F_{m-1}(x_i))/\partial F_{m-1}(x_i)$;
-    2. Fit a regression tree to $\{(x_i, r_{im})\}$ (split by MSE), giving leaf regions $R_{jm}, j=1..J$;
-    3. For each leaf, do a **line search** for the optimal output: $\gamma_{jm} = \arg\min_\gamma \sum_{x_i\in R_{jm}} L(y_i, F_{m-1}(x_i)+\gamma)$;
-    4. Update $F_m(x)=F_{m-1}(x)+\nu\sum_j \gamma_{jm}\mathbb{I}(x\in R_{jm})$.
-3. Output $F_M(x)$.
+**Start from a constant model. Each round, compute every sample's negative gradient, fit a regression tree to it, find the best output value for each leaf, then scale by the learning rate and add the tree to the model.**
 
-- Note: the tree's **structure** is determined by fitting the negative gradient, while the **leaf values** are re-optimized under the original loss (the two coincide for squared loss).
+- Initialize with the constant that minimizes the loss (the mean for squared loss, the log-odds for log loss).
+- The tree's **structure** comes from fitting the negative gradient. Its **leaf values** are re-optimized on the original loss (line search).
+- After M rounds, the output is the sum of all trees.
 
 Q5: ***How does GBDT do classification?***
 
-- GBDT's base learners are always **regression trees**; for classification they fit values in log-odds (logit) space.
-- **Binary classification**: $p=\sigma(F(x))$ with log loss $L=-[y\log p + (1-y)\log(1-p)]$, $y\in\{0,1\}$.
-    - Negative gradient $r_i = y_i - p_i$ (true label minus predicted probability);
-    - Leaf values have no closed form and are usually approximated by one **Newton step**: $\gamma_j = \frac{\sum_{i\in R_j} r_i}{\sum_{i\in R_j} p_i(1-p_i)}$;
-    - Initialization $F_0 = \log\frac{\bar y}{1-\bar y}$.
-- **Multi-class** ($K$ classes): each round trains **$K$ trees**, one per class; outputs go through softmax to get probabilities, and the negative gradient for class $k$ is $y_{ik}-p_{ik}$. Hence the number of trees for multi-class is $K \times$ the number of rounds.
+**The base learners are always regression trees. For classification GBDT boosts in log-odds (logit) space, then turns the score into a probability with a sigmoid or softmax.**
+
+- Binary classification uses log loss, and the negative gradient is "true label minus predicted probability", $y - p$.
+- Leaf values have no closed form, so one Newton step is usually used to approximate them.
+- Multiclass (K classes) trains K trees per round, one per class, and a softmax over their outputs gives the probabilities.
 
 Q6: ***What do shrinkage (learning rate) and subsampling do in GBDT?***
 
-- **Shrinkage**: $F_m = F_{m-1} + \nu h_m$, $0<\nu\le1$ (commonly 0.01–0.1). Each tree takes only "a small step", not fully trusting any single tree and leaving room for later trees to correct, which acts as regularization. Empirically **small learning rate + many trees** generalizes better but trains longer; $\nu$ and the number of trees must be tuned jointly (usually with early stopping).
-- **Row subsampling** (Stochastic Gradient Boosting, Friedman 2002): each round trains the tree on only a fraction of samples (e.g. 50%–80%, without replacement). The randomness reduces variance and overfitting and speeds up training; unsampled samples can also be used for an OOB-like estimate.
-- **Column subsampling** (introduced by XGBoost, borrowed from random forests): randomly select a subset of features per tree/level/node, further reducing overfitting and computation.
+**Both are regularization. The learning rate makes each tree take only a small step, which leaves room for later trees to correct it. Subsampling adds randomness, which lowers variance, reduces overfitting and speeds up training.**
+
+- In practice "small learning rate + many trees" generalizes better but is slower. Tune the learning rate and the number of trees together, with early stopping.
+- Row subsampling: each round trains on only part of the samples (Stochastic Gradient Boosting).
+- Column subsampling: each tree, level or node uses only some of the features. XGBoost borrowed this from random forests.
 
 Q7: ***Which loss functions are commonly used with GBDT?***
 
-- Regression:
-    - **Squared loss** (L2): negative gradient is the residual, sensitive to outliers;
-    - **Absolute loss** (L1): negative gradient is $\text{sign}(y-F)$, leaf value is the median of residuals, more robust;
-    - **Huber loss**: L2 for small errors, L1 for large errors, combining both;
-    - **Quantile loss**: for quantile regression and prediction intervals;
-    - Poisson / Gamma / Tweedie: counts, positive values, insurance claims, etc.
-- Classification: log loss (binary / multi-class softmax), exponential loss (equivalent to AdaBoost).
-- Ranking: LambdaMART (LambdaRank gradients + MART), `rank:ndcg` and `lambdarank` in XGBoost/LightGBM.
-- Any loss that is **first-order differentiable** works for GBDT; XGBoost additionally needs the **second derivative** (custom losses must supply grad and hess).
+**Any loss with a first derivative works with GBDT. Regression commonly uses squared, absolute, Huber and quantile loss. Classification uses log loss, and ranking uses LambdaMART.**
+
+- Squared loss is sensitive to outliers. Absolute loss and Huber loss are more robust.
+- Quantile loss gives prediction intervals. Poisson, Gamma and Tweedie suit counts, positive values and similar targets.
+- Exponential loss corresponds to AdaBoost.
+- XGBoost also needs the second derivative, so a custom loss must provide both grad and hess.
 
 ## XGBoost
 
 Q8: ***What is XGBoost's objective function? How is it derived with a second-order Taylor expansion?***
 
-- Regularized objective (adding tree $f_t$ at round $t$):
-$$\mathcal{L}^{(t)} = \sum_{i=1}^{n} l\left(y_i, \hat y_i^{(t-1)} + f_t(x_i)\right) + \Omega(f_t),\quad \Omega(f) = \gamma T + \frac{1}{2}\lambda\sum_{j=1}^{T} w_j^2$$
-where $T$ is the number of leaves and $w_j$ the leaf weights (an L1 term $\alpha\sum|w_j|$ can also be added).
-- Second-order Taylor expansion at $\hat y^{(t-1)}$, with $g_i = \partial_{\hat y} l(y_i,\hat y^{(t-1)})$ and $h_i = \partial^2_{\hat y} l(y_i,\hat y^{(t-1)})$, dropping constants:
-$$\tilde{\mathcal{L}}^{(t)} = \sum_{i=1}^{n}\left[g_i f_t(x_i) + \frac12 h_i f_t^2(x_i)\right] + \gamma T + \frac12\lambda\sum_j w_j^2$$
-- The tree maps samples to leaves, $f_t(x)=w_{q(x)}$. Let $I_j=\{i\mid q(x_i)=j\}$, $G_j=\sum_{i\in I_j} g_i$, $H_j = \sum_{i\in I_j} h_i$, and regroup by leaf:
-$$\tilde{\mathcal{L}}^{(t)} = \sum_{j=1}^{T}\left[G_j w_j + \frac12 (H_j+\lambda) w_j^2\right] + \gamma T$$
-Each leaf is an independent univariate quadratic.
+**The objective is "training loss + a complexity penalty on the tree", where the penalty covers the number of leaves and the size of the leaf weights. A second-order Taylor expansion of the loss around the previous round's prediction turns each leaf's objective into a quadratic in its leaf weight, which can be solved directly.**
+
+- Each sample needs only its first derivative $g_i$ and second derivative $h_i$, summed per leaf into $G_j$ and $H_j$.
+- After dropping constants the leaves are independent, so each can be optimized on its own.
+- Key formula: $\Omega(f) = \gamma T + \frac{1}{2}\lambda\sum_j w_j^2$
 
 Q9: ***Derive XGBoost's optimal leaf weight and split gain formula.***
 
-- Setting the derivative with respect to $w_j$ to zero gives the **optimal leaf weight**:
-$$w_j^* = -\frac{G_j}{H_j+\lambda}$$
-- Substituting back gives the optimal objective for a fixed tree structure $q$ (the **structure score**, lower is better):
-$$\tilde{\mathcal{L}}^*(q) = -\frac12\sum_{j=1}^{T}\frac{G_j^2}{H_j+\lambda} + \gamma T$$
-- The reduction in objective when a node is split into left and right children is the **split gain**:
-$$\text{Gain} = \frac12\left[\frac{G_L^2}{H_L+\lambda} + \frac{G_R^2}{H_R+\lambda} - \frac{(G_L+G_R)^2}{H_L+H_R+\lambda}\right] - \gamma$$
-- Exact greedy algorithm: sort each feature by value, scan left to right accumulating $G_L,H_L$ ($G_R=G-G_L$), and a single pass yields the gain of every split point.
-- Connection to Newton's method: $w^*=-G/(H+\lambda)$ is an L2-regularized **Newton step**, so XGBoost can be viewed as Newton's method in function space while GBDT is gradient descent in function space.
+**Minimizing each leaf's quadratic gives the optimal leaf weight: minus the gradient sum divided by (Hessian sum + λ). Plugging it back gives the tree's structure score. The split gain is the score of the left and right children minus the score of the parent, minus γ.**
+
+- Each node's score has the form $G^2/(H+\lambda)$. Gain = left score + right score − parent score (times 1/2). The node splits only if the gain is still above 0 after subtracting γ.
+- Exact greedy: sort each feature and accumulate $G_L, H_L$ from left to right, so one scan gives the gain of every split point.
+- The optimal weight is a Newton step with L2 regularization, so XGBoost can be seen as Newton's method in function space.
+- Key formula: $w_j^* = -\frac{G_j}{H_j+\lambda}$
 
 Q10: ***What roles do $\gamma$, $\lambda$ and `min_child_weight` play in XGBoost?***
 
-- **$\gamma$** (`gamma` / `min_split_loss`): the cost of adding one leaf. A split is made only if $\text{Gain}>0$ (i.e. the bracketed gain exceeds $\gamma$), which is a **built-in pre-pruning**. In practice XGBoost first grows to `max_depth` and then **prunes splits with negative gain bottom-up**, avoiding the "short-sightedness" of pre-pruning.
-- **$\lambda$** (`reg_lambda`): L2 regularization on leaf weights, shrinking $|w^*|$ so each tree's predictions are smoother; it also appears in the gain denominators, suppressing leaves with few samples (small $H$). **$\alpha$** (`reg_alpha`) is L1 regularization, which drives small weights to zero.
-- **`min_child_weight`**: the minimum $\sum h_i$ in a child. For squared loss $h_i=1$, so it is a minimum sample count; for log loss $h_i=p_i(1-p_i)$, which is small where predictions are already confident, preventing splits made just for a handful of "already learned" samples.
+**γ is the cost of adding one more leaf, so a split with too little gain is skipped. λ is L2 regularization on leaf weights, which makes predictions smoother. `min_child_weight` requires each child's Hessian sum to stay above a threshold, so the tree does not split off a tiny handful of samples.**
+
+- γ acts as built-in pruning. XGBoost first grows to `max_depth`, then prunes negative-gain splits bottom-up, which avoids the short-sightedness of pre-pruning.
+- λ also appears in the gain denominator, so it holds back leaves with few samples. α is L1 regularization and pushes small weights to 0.
+- Under squared loss $h_i=1$, so `min_child_weight` is just a minimum sample count. Under log loss, samples the model is already confident about have very small $h_i$.
 
 Q11: ***Why does XGBoost use second-order derivatives? What are the benefits?***
 
-- **Accuracy and convergence**: second-order information corresponds to Newton's method, approximating the loss more accurately than first-order-only GBDT; it usually converges faster and needs fewer trees.
-- **Unified framework**: the split criterion and leaf weights depend only on $g_i, h_i$, so any **twice-differentiable** loss can be plugged in by providing grad/hess, without deriving a separate line search per loss.
-- **Natural regularization**: the quadratic form lets $\lambda$ and $\gamma$ appear in closed form in the leaf weights and gain.
-- $h_i$ also acts as a **sample weight**: the objective can be rewritten as $\sum_i \frac12 h_i (f_t(x_i) - (-g_i/h_i))^2 + \Omega$, a weighted squared loss with weights $h_i$ and labels $-g_i/h_i$, which is the theoretical basis of the weighted quantile sketch.
-- Requirement: the loss must be twice differentiable with $h_i>0$ (e.g. MAE has zero second derivative and needs special handling).
+**The second derivative turns gradient descent into Newton's method. That approximates the loss more accurately, so training usually converges faster and needs fewer trees. It also lets any twice-differentiable loss plug into the same split and leaf-weight formulas.**
+
+- Unified framework: a custom loss only needs grad and hess. There is no separate line-search derivation for each loss.
+- The regularizers λ and γ show up in closed form in the leaf weight and the gain.
+- $h_i$ can be read as a sample weight. This is the basis of the weighted quantile sketch.
+- The loss must be twice differentiable with $h_i>0$. For example, MAE has a zero second derivative and needs special handling.
 
 Q12: ***What engineering optimizations does XGBoost have? (sparsity awareness, weighted quantile sketch, block structure)***
 
-- **Approximate splitting and the Weighted Quantile Sketch**: exact greedy has to scan every split point, which is expensive on large data. The approximate algorithm proposes candidate split points by quantiles (global: once per tree; local: re-proposed after each split). Since the objective is a weighted squared loss with weights $h_i$, candidates are chosen by **$h_i$-weighted quantiles**, and the paper proposes a mergeable weighted quantile sketch data structure with theoretical guarantees.
-- **Sparsity-aware Split Finding**: for sparse data from missing values, zeros or one-hot encoding, each node learns a **default direction**: compute the gain with all missing samples sent left and with all sent right, and keep the larger. Only non-missing values are scanned, so the cost is linear in the number of non-missing entries, greatly speeding up sparse data.
-- **Column Block structure**: before training, data is **pre-sorted by column in CSC format** and stored in blocks, reused by every subsequent split to avoid repeated sorting; gain computation across features can run **in parallel** (XGBoost parallelism is at the **feature level**; trees are still sequential).
-- **Cache-aware access**: fetching gradients by sorted index causes non-contiguous memory access and poor cache hit rates, so XGBoost allocates a buffer per thread and **prefetches** gradients into contiguous memory.
-- **Out-of-core computation**: when data does not fit in memory, blocks are stored on disk, with **block compression** and **sharding** across multiple disks, and an independent thread pre-reads them.
-- Note: XGBoost later also implemented the histogram algorithm (`tree_method="hist"`, the default since 2.0) and GPU training (`device="cuda"`); exact greedy is rarely used in practice now.
+**XGBoost mainly speeds up finding split points. A weighted quantile sketch cuts down the candidate splits, sparsity-aware splitting handles missing values efficiently, and a pre-sorted column block structure allows feature-level parallelism. Cache optimizations and out-of-core computation are added on top.**
+
+- Weighted quantile sketch: propose candidate splits at quantiles weighted by $h_i$, instead of scanning every value.
+- Sparsity awareness: each node learns a default direction for missing values (try all-left and all-right, keep the higher gain), and only non-missing values are scanned.
+- Column blocks: data is sorted by column once before training, stored in blocks and reused. Different features can be processed in parallel, but trees are still built sequentially.
+- Cache-aware prefetching and out-of-core computation (blocks on disk, compressed and sharded) support large data.
+- The histogram method (`tree_method="hist"`) is now the default and GPU training is supported, so exact greedy is rarely used.
 
 Q13: ***What improvements does XGBoost make over traditional GBDT?***
 
-1. **Second-order Taylor expansion** (Newton's method in function space) vs first-order gradients only in GBDT;
-2. **Explicit regularization in the objective** (number of leaves $\gamma T$ and L2/L1 on leaf weights) to control model complexity;
-3. **Base learners**: besides CART, supports linear models (`gblinear`) and DART (trees with dropout);
-4. **Column subsampling**, borrowed from random forests, reducing overfitting and computation;
-5. **Missing-value handling**: sparsity awareness, automatically learning default directions;
-6. **Shrinkage** applied to each tree (GBDT has it too, but XGBoost makes it standard);
-7. **Split finding**: supports exact, approximate (weighted quantile sketch) and histogram algorithms;
-8. **Engineering optimizations**: feature-level parallelism, pre-sorted column blocks, cache awareness, out-of-core computation, distributed training, GPU;
-9. **Pruning**: grow to max depth first, then post-prune using $\gamma$;
-10. Built-in cross-validation, early stopping, and support for custom losses and evaluation metrics.
+**On the algorithm side, XGBoost uses a second-order Taylor expansion and puts explicit regularization in the objective. On the engineering side, it adds a lot of speedups. The result is a GBDT implementation that is more accurate, faster and less prone to overfitting.**
+
+- Algorithm: second derivatives (Newton's method), regularization on leaf count and leaf weights, column sampling, post-pruning with γ.
+- Missing values: sparsity awareness that learns a default direction automatically.
+- Split finding: exact, weighted-quantile approximate and histogram methods.
+- Engineering: feature-level parallelism, pre-sorted column blocks, cache awareness, out-of-core, distributed and GPU training.
+- Usability: linear base learners and DART, plus built-in cross-validation, early stopping and custom losses.
 
 ## LightGBM
 
 Q14: ***What is LightGBM's histogram algorithm? What are its advantages?***
 
-- Before training, each continuous feature is discretized into at most `max_bin` (default 255) **bins**, and each sample stores only the bin index (e.g. uint8). When splitting, the data is traversed accumulating $\sum g$, $\sum h$ and sample counts per bin to form a histogram, and the best split point is searched over **bin boundaries**.
-- Advantages:
-    - **Low memory**: no need to store pre-sorted values and sorted indices; feature values are stored as 8-bit integers, reducing memory to roughly 1/8 of pre-sorting;
-    - **Fast computation**: split candidates drop from $O(\#\text{data})$ to $O(\#\text{bin})$; building histograms costs $O(\#\text{data}\times\#\text{feature})$ and finding splits $O(\#\text{bin}\times\#\text{feature})$;
-    - **Histogram subtraction**: parent histogram = left child histogram + right child histogram, so only the histogram of the child with **fewer samples** needs to be built and the other is obtained by subtraction, nearly doubling speed;
-    - **Regularization effect**: coarse split points are themselves a form of regularization and are insensitive to noise;
-    - Low communication cost, good for distributed parallelism.
-- Drawback: split points are not exact and some accuracy may be lost (in practice the impact is usually small and often negligible within the GBDT framework).
+**Before training, each continuous feature is bucketed into at most 255 bins, and each sample stores only its bin index. When splitting, gradients are summed per bin to build a histogram, and split points are searched only at bin boundaries. This saves memory and is fast.**
+
+- Small memory: feature values are stored as 8-bit integers, and no pre-sorted results are kept.
+- Fast: the number of candidate splits drops from the number of samples to the number of bins.
+- Histogram subtraction: subtracting one child's histogram from the parent's gives the other child's, so only the child with fewer samples has to be built.
+- Coarse splits act as a regularizer. The cost is less precise split points, but the accuracy loss is usually tiny.
 
 Q15: ***What is the difference between level-wise and leaf-wise tree growth?***
 
-- **Level-wise (depth-wise)**, XGBoost's default (`grow_policy="depthwise"`): split all leaves on the same level each time.
-    - Pros: easy to parallelize, trees are balanced, less prone to overfitting;
-    - Cons: many low-gain leaves get split too, wasting computation.
-- **Leaf-wise (best-first)**, LightGBM's default: each time, split the one leaf with the **largest gain** among all current leaves.
-    - Pros: for the same number of leaves, it reduces loss faster and gives **higher accuracy**;
-    - Cons: can grow very deep, unbalanced trees and **overfits easily on small data**, so it must be constrained with `num_leaves` (the main complexity parameter), `max_depth` and `min_data_in_leaf`.
-- Tuning note: `num_leaves` should be smaller than $2^{\text{max\_depth}}$, otherwise the `max_depth` constraint is meaningless. XGBoost can also grow leaf-wise via `grow_policy="lossguide"`.
+**Level-wise growth splits every leaf on a level at once. The tree stays balanced and is less prone to overfitting, but many splits are useless. Leaf-wise growth splits only the leaf with the highest gain. It is more accurate for the same number of leaves, but it can grow very deep trees and overfit on small data.**
+
+- XGBoost defaults to level-wise and LightGBM to leaf-wise. XGBoost can also use `grow_policy="lossguide"`.
+- Leaf-wise growth must be constrained with `num_leaves` (the main complexity parameter), `max_depth` and `min_data_in_leaf`.
+- `num_leaves` should be below $2^{\text{max\_depth}}$, otherwise the depth limit does nothing.
 
 Q16: ***What is GOSS (Gradient-based One-Side Sampling)?***
 
-- Motivation: samples with small absolute gradients are already well fitted and contribute little to information gain; but simply dropping them would change the data distribution.
-- Procedure:
-    1. Sort by absolute gradient in descending order and **keep the top $a\times100\%$ large-gradient samples**;
-    2. **Randomly sample $b\times100\%$** from the remaining samples;
-    3. When computing gain, multiply the sampled small-gradient samples by weight $\frac{1-a}{b}$ to compensate for the distribution shift, giving an approximately unbiased gain estimate.
-- Effect: gain can be estimated fairly accurately using only an $(a+b)$ fraction of the data, significantly speeding up training; the paper gives an error bound.
-- In recent LightGBM versions it is enabled via `data_sample_strategy="goss"`, with parameters `top_rate` ($a$) and `other_rate` ($b$).
+**GOSS keeps all large-gradient samples, randomly samples only from the small-gradient ones, and up-weights the sampled small-gradient samples to compensate. This estimates split gains fairly accurately from a small fraction of the data, which speeds up training.**
+
+- Motivation: small-gradient samples are already well fit and contribute little to the gain, but simply dropping them would change the data distribution.
+- Method: keep the top $a$ fraction of large-gradient samples, sample a $b$ fraction of the rest, and multiply those by the weight $\frac{1-a}{b}$.
+- In newer versions enable it with `data_sample_strategy="goss"`. The parameters are `top_rate` (a) and `other_rate` (b).
 
 Q17: ***What is EFB (Exclusive Feature Bundling)?***
 
-- Motivation: in high-dimensional sparse data (e.g. one-hot), many features **almost never take non-zero values simultaneously** (mutually exclusive), so they can be merged into one feature without losing information, reducing the number of features.
-- Procedure:
-    1. **Decide which features to bundle**: build a graph whose nodes are features and whose edge weights are the number of conflicts (simultaneous non-zeros). Bundling is modeled as **graph coloring** (NP-hard) and approximated greedily: sort features by degree and add each to an existing bundle whose conflicts stay below threshold $K$, otherwise create a new bundle; a small number of conflicts is tolerated in exchange for more bundling.
-    2. **Merge features**: add **offsets** to the values of different features in a bundle so they fall into non-overlapping bin ranges. E.g. if feature A takes values in [0,10) and B in [0,20), add offset 10 to B to get [10,30); the merged feature takes values in [0,30).
-- Effect: histogram construction drops from $O(\#\text{data}\times\#\text{feature})$ to $O(\#\text{data}\times\#\text{bundle})$, with $\#\text{bundle}\ll\#\text{feature}$.
+**In high-dimensional sparse data, many features are almost never non-zero at the same time. EFB bundles these mutually exclusive features into a single feature. This cuts the feature count and speeds up histogram building, with almost no information loss.**
+
+- Choosing which features to bundle can be modeled as graph coloring. It is solved greedily, and a few conflicts are allowed.
+- When merging, each feature's values are shifted by an offset so they fall into non-overlapping bin ranges.
+- The cost of building histograms then scales with the number of bundles instead of the number of features.
 
 Q18: ***How does LightGBM handle categorical features?***
 
-- Native support: specify via `categorical_feature`; features must be encoded as non-negative integers, no one-hot needed.
-- **Many-vs-many** splits: at each node, categories are **sorted** by $\frac{\sum g}{\sum h + \text{cat\_smooth}}$, and the best split point is searched on the sorted histogram as for a continuous feature, i.e. the category set is partitioned into two subsets. This applies Fisher's (1958) optimal partitioning idea, with complexity $O(k\log k)$ instead of $O(2^k)$.
-- When the number of categories is small ($\le$ `max_cat_to_onehot`, default 4), it falls back to one-vs-rest.
-- Anti-overfitting parameters: `min_data_per_group`, `cat_smooth`, `cat_l2`, `max_cat_threshold`. High-cardinality categoricals still overfit easily; consider target encoding or CatBoost in that case.
-- Why not one-hot: with one-hot each split can only peel off one category, gains are small, and trees become unbalanced and deep; native splits can group similar categories in one go.
+**LightGBM supports categorical features natively, with no one-hot needed. At each node it sorts the categories by "gradient sum / Hessian sum" and then searches for the best split as if the feature were continuous, so the categories are divided into two groups in one go.**
+
+- Sorting and then splitting costs only $O(k\log k)$, instead of enumerating $2^k$ partitions.
+- With very few categories (≤4 by default) it falls back to one-vs-rest.
+- Why not one-hot: one-hot can only split off one category per split, so gains are small and trees become deep and unbalanced.
+- High-cardinality categories can still overfit. Tune `cat_smooth`, `min_data_per_group` and similar parameters, or switch to target encoding or CatBoost.
 
 Q19: ***How do LightGBM and XGBoost differ?***
 
+**LightGBM uses histograms, leaf-wise growth, GOSS and EFB, so it is faster and uses less memory. Classic XGBoost uses pre-sorting and level-wise growth, which gives more balanced and more robust trees. When both are well tuned, their accuracy is usually similar.**
+
 | | XGBoost | LightGBM |
 |---|---|---|
-| Split finding | Classically pre-sorted exact / weighted-quantile approximate (now hist by default) | Histogram algorithm + histogram subtraction |
-| Growth strategy | Level-wise by default | Leaf-wise by default |
-| Sampling | Random row/column sampling | Additionally GOSS gradient-based one-side sampling |
-| Sparse features | Sparsity-aware splits | EFB exclusive feature bundling |
-| Categorical features | Manual encoding earlier; newer versions have experimental/native support (`enable_categorical`) | Native many-vs-many splits |
-| Speed/memory | Slower, more memory (classic versions) | Faster, less memory |
-| Parallelism | Feature parallel | Feature parallel, data parallel, **voting parallel** (lower communication) |
-| Overfitting | Balanced trees, relatively robust | Leaf-wise overfits easily on small data |
+| Split finding | Pre-sorted / quantile approximation (hist is now default) | Histogram + subtraction |
+| Growth strategy | Level-wise | Leaf-wise |
+| Sampling and sparsity | Row/column sampling, sparsity awareness | GOSS, EFB |
+| Categorical features | Newer versions support `enable_categorical` | Native many-vs-many splits |
 
-- Practical conclusion: with thorough tuning their accuracy is usually similar; LightGBM is faster on large, high-dimensional data; since XGBoost 2.x made hist the default and added GPU and categorical support, the speed gap has narrowed considerably.
+- Since XGBoost 2.x made hist the default and added GPU and categorical support, the speed gap has narrowed a lot.
 
 ## CatBoost
 
 Q20: ***What are CatBoost's Ordered Target Statistics? What problem do they solve?***
 
-- Categorical features are often handled with **target encoding** (replace a category with the mean label of that category). But computing it on all training data (including the sample itself) causes **target leakage**: the encoding of sample $x_i$ contains information about $y_i$, so during training the encoding is strongly correlated with the label while the test distribution differs, causing **conditional shift** and overfitting (in the extreme, if each category appears once, the encoding equals the label itself).
-- CatBoost's approach: take a random permutation $\sigma$ of the training samples; the encoding of sample $x_i$ **uses only samples that precede it**:
-$$\hat x_i^k = \frac{\sum_{j:\sigma(j)<\sigma(i)} \mathbb{I}(x_j^k = x_i^k)\, y_j + a\,P}{\sum_{j:\sigma(j)<\sigma(i)} \mathbb{I}(x_j^k = x_i^k) + a}$$
-where $P$ is a prior (e.g. the global positive rate) and $a>0$ is a smoothing weight. Like "online learning", each sample is encoded using only "history", avoiding leakage.
-- Multiple random permutations are used to reduce the variance of a single permutation. At test time, statistics are computed on all training data.
-- CatBoost also **greedily constructs combinations of categorical features** (feature crosses) and applies ordered TS to them as well.
+**They are a target encoding that avoids target leakage. The samples are put in a random order, and each sample's category encoding uses only the label mean of the samples before it. So a sample's encoding never includes its own label.**
+
+- Plain target encoding uses the sample's own label. The encoding is then strongly tied to the label during training but not at test time, which causes conditional shift and overfitting.
+- A prior and a smoothing term keep the encoding stable for rare categories.
+- Several random orderings are used to reduce variance. At test time the statistics are computed on all training data.
+- CatBoost also greedily builds combinations of categorical features and applies ordered TS to them too.
 
 Q21: ***What is Ordered Boosting? What is prediction shift?***
 
-- **Prediction shift**: in standard GBDT, the model $F_{t-1}$ used to compute the gradient of sample $x_i$ at round $t$ was **trained on data including $x_i$**, so the residual distribution on training samples differs from that on test samples (training residuals are too small); the gradient estimate is biased, causing overfitting. It is essentially the same kind of problem as target leakage.
-- **Ordered Boosting**: also based on random permutations; in theory, for each sample $i$ it maintains a model $M_{i-1}$ **trained only on the first $i-1$ samples of the permutation**, and uses $M_{i-1}$ to compute the residual of sample $i$, ensuring the residual is "unbiased".
-- In practice maintaining $n$ models is infeasible, so CatBoost maintains approximate models only for exponentially growing prefix lengths ($2^j$), sharing the tree structure and differing only in leaf values, which keeps the overhead acceptable.
-- The effect is most noticeable on small datasets; on large data `boosting_type="Plain"` can be used for speed.
+**Prediction shift happens because standard GBDT computes a sample's gradient with a model that has already seen that sample. Training residuals come out smaller than test residuals, so the gradient estimates are biased and the model overfits. Ordered Boosting computes each sample's residual with a model trained only on the samples before it in a random order, which removes this bias.**
+
+- It is basically the same kind of problem as target leakage.
+- In practice CatBoost does not keep n models. It keeps approximate models only for prefix lengths that grow exponentially, and they share tree structures.
+- The gain is clear on small datasets. On large data, `boosting_type="Plain"` is faster.
 
 Q22: ***Why does CatBoost use symmetric (oblivious) trees?***
 
-- **Symmetric tree**: all nodes on the same level use **the same feature and split threshold**; a tree of depth $d$ has $2^d$ leaves, each indexed by the $d$ binary decisions.
-- Advantages:
-    - **Extremely fast inference**: prediction only needs $d$ comparisons to form a $d$-bit binary index and a direct table lookup, easy to vectorize/SIMD, so CPU inference is significantly faster than with ordinary trees;
-    - **Regularization effect**: the strong structural constraint resists overfitting and makes the model less sensitive to hyperparameters, so default parameters already perform well;
-    - Training only needs to pick one best (feature, threshold) per level, and it combines more easily with ordered boosting.
-- Drawbacks: limited expressiveness, needing more trees at the same depth; CatBoost also supports `grow_policy="Depthwise"` / `"Lossguide"`.
+**In a symmetric tree every node on a level uses the same feature and threshold. Prediction takes only d comparisons, which form a d-bit index into a lookup table, so inference is very fast. The strong structural constraint also acts as regularization and makes overfitting less likely.**
+
+- Inference vectorizes easily and is clearly faster than ordinary trees on CPU.
+- It is not very sensitive to hyperparameters, and the defaults already work well.
+- The downside is limited expressiveness: the same depth needs more trees. CatBoost also supports Depthwise and Lossguide growth.
 
 ## Tuning and Practice
 
 Q23: ***What are the key hyperparameters of GBDT-style models? What is the tuning order?***
 
-- Key hyperparameters (using XGBoost/LightGBM as examples):
-    - Iterations and step size: `n_estimators`, `learning_rate`;
-    - Tree complexity: `max_depth`, `num_leaves` (LightGBM), `min_child_weight` / `min_data_in_leaf`;
-    - Randomness: `subsample` / `bagging_fraction`, `colsample_bytree` / `feature_fraction`;
-    - Regularization: `reg_lambda`, `reg_alpha`, `gamma` / `min_split_gain`;
-    - LightGBM-specific: `max_bin`, categorical-related parameters.
-- Common tuning order:
-    1. Fix a relatively large learning rate (e.g. 0.1) and use **early stopping** to determine the number of trees;
-    2. Tune tree structure: `max_depth` / `num_leaves`, `min_child_weight` / `min_data_in_leaf` (largest impact on performance);
-    3. Tune sampling: `subsample`, `colsample_bytree` (often 0.6–0.9);
-    4. Tune regularization: `lambda`, `alpha`, `gamma`;
-    5. **Lower the learning rate** (e.g. 0.01–0.05), increase the number of trees, and early-stop again to get the final model.
-- In practice, Bayesian optimization tools such as Optuna are often used to search these parameters jointly, which is more efficient than grid search.
+**The key parameters fall into four groups: number of trees and learning rate, tree complexity, sampling ratios, and regularization. A common order is: use a fairly large learning rate with early stopping to fix the number of trees, then tune tree structure, then sampling and regularization, and finally lower the learning rate and add more trees.**
+
+- Tree complexity (the biggest effect): `max_depth`, `num_leaves`, `min_child_weight` / `min_data_in_leaf`.
+- Sampling: `subsample` and `colsample_bytree`, usually 0.6–0.9.
+- Regularization: `reg_lambda`, `reg_alpha`, `gamma`.
+- In practice, Bayesian optimizers such as Optuna search these jointly and are more efficient than grid search.
 
 Q24: ***How is early stopping used in GBDT? What should you watch out for?***
 
-- During training, monitor a metric on the **validation set**; if it does not improve for `early_stopping_rounds` consecutive rounds (e.g. 50–200), stop and use the model at the best round (`best_iteration`).
+**Monitor a validation metric during training. Stop once it has not improved for a number of rounds (e.g. 50–200), and keep the model from the best round.**
 
-```python
-import lightgbm as lgb
-
-model = lgb.LGBMClassifier(n_estimators=10000, learning_rate=0.05, num_leaves=63)
-model.fit(X_tr, y_tr,
-          eval_set=[(X_val, y_val)],
-          eval_metric="auc",
-          callbacks=[lgb.early_stopping(stopping_rounds=100), lgb.log_evaluation(200)])
-print(model.best_iteration_)
-```
-
-- Caveats:
-    - The validation set used for early stopping is itself "fitted", so final evaluation must use an **independent test set** or nested cross-validation;
-    - With cross-validation each fold stops at a different round; when retraining on the full data you can use the average best round (or scale it up somewhat with the data size);
-    - The monitored metric should match the business objective (e.g. AUC, logloss, RMSE), and the validation split should mirror production (time series must be split by time).
+- The early-stopping validation set is itself "fit", so the final evaluation needs a separate test set or nested cross-validation.
+- In cross-validation each fold has a different best round. When retraining on all data, use the average (or scale it up a little for the larger data).
+- The monitored metric should match the business goal, and the validation split should match production (split time series by time).
+- In LightGBM, use `callbacks=[lgb.early_stopping(100)]` and then read `best_iteration_`.
 
 Q25: ***How does GBDT handle class imbalance?***
 
-- **Sample/class weighting**: `scale_pos_weight` in XGBoost/LightGBM (often set to #negatives/#positives), LightGBM's `is_unbalance=True`, or custom weights via `sample_weight`. Weighting amplifies the gradients and Hessians of the minority class, affecting splits and leaf values.
-- **Sampling**: downsample the majority class, upsample the minority class (SMOTE usually brings limited gains for tree models).
-- **Custom loss**: e.g. Focal Loss, which requires supplying first and second derivatives.
-- **Evaluation and threshold**: use PR-AUC, F1, Recall@K, etc. instead of accuracy; do not use the default 0.5 threshold, but **tune the classification threshold** on the validation set.
-- Note: weighting or sampling **distorts predicted probabilities**; when accurate probabilities are needed (e.g. CTR prediction), calibrate (Platt / Isotonic) or correct for downsampling with $p = \frac{p'}{p' + (1-p')/w}$ ($w$ is the negative sampling rate).
+**The most common fix is to up-weight the minority class (e.g. `scale_pos_weight` = negatives / positives). Resampling and custom losses are the next options. You also need suitable evaluation metrics and a tuned decision threshold.**
+
+- Weighting enlarges the minority class's gradients and Hessians, which affects both splits and leaf values.
+- You can also downsample the majority class or use Focal Loss (which needs first and second derivatives).
+- Use PR-AUC, F1 and similar metrics instead of accuracy, and tune the threshold on the validation set instead of using the default 0.5.
+- Weighting or resampling distorts probabilities. When accurate probabilities matter (e.g. CTR), calibrate them or correct for the sampling.
 
 Q26: ***What kinds of feature importance does GBDT offer? What are their issues? What are SHAP's advantages?***
 
-- XGBoost's `importance_type`:
-    - **weight / split**: the **number of times** a feature is used to split, biased toward high-cardinality and continuous features;
-    - **gain**: the **average gain** of splits using the feature (`total_gain` is the total), which better reflects actual contribution but is still based on the training set;
-    - **cover**: the average number of samples (sum of Hessians) covered by splits on the feature.
-- LightGBM provides `split` and `gain`. Rankings under different metrics can differ a lot, and these global metrics are **inconsistent**: when a model relies more on a feature, its importance does not necessarily increase.
-- **SHAP** (TreeSHAP, Lundberg et al.): based on Shapley values, satisfying **local accuracy, consistency and missingness**; TreeSHAP computes them exactly for tree models in polynomial time; it gives **per-sample** contributions and directions for every feature, the mean of $|\phi|$ gives global importance, and interactions can be analyzed (SHAP interaction values).
-- Note: correlated features still share SHAP values; to assess contribution to generalization, combine with permutation importance on the validation set.
+**The built-in importances count splits (split/weight), sum gains (gain) or measure the samples covered (cover). All of them are computed on the training set, they can rank features very differently, and they are not consistent. SHAP is based on Shapley values. It is guaranteed to be consistent and gives each feature's contribution and direction for every sample.**
+
+- Split counts favor high-cardinality and continuous features. Gain reflects real contribution better but is still based on the training set.
+- Inconsistency: when the model relies more on a feature, that feature's importance does not necessarily go up.
+- TreeSHAP computes exact values on tree models in polynomial time and can also analyze interactions.
+- Correlated features still share SHAP value. To judge contribution to generalization, add permutation importance on a validation set.
 
 Q27: ***What is GBDT + LR? Why does it work?***
 
-- Origin: Facebook's 2014 ad CTR prediction paper (*Practical Lessons from Predicting Clicks on Ads at Facebook*).
-- Method: first train a GBDT, take the **leaf index** each sample falls into in each tree as a categorical feature, one-hot encode them into a high-dimensional sparse vector (optionally alongside raw features), and feed it to **logistic regression**.
+**This is Facebook's 2014 CTR prediction approach. First train a GBDT, one-hot the index of the leaf each sample lands in for every tree to get sparse features, then feed those to logistic regression. Each root-to-leaf path acts as an automatically learned feature combination, which saves a lot of manual feature engineering.**
 
-```python
-from sklearn.ensemble import GradientBoostingClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.preprocessing import OneHotEncoder
-
-gbdt = GradientBoostingClassifier(n_estimators=100, max_depth=3).fit(X_gbdt, y_gbdt)
-leaves = gbdt.apply(X_lr)[:, :, 0]            # (n_samples, n_trees) leaf indices
-enc = OneHotEncoder(handle_unknown="ignore").fit(leaves)
-lr = LogisticRegression(max_iter=1000).fit(enc.transform(leaves), y_lr)
-```
-
-- Why it works: each root-to-leaf path is an **automatically learned feature combination** (multi-feature crossing + nonlinear discretization), solving LR's need for heavy manual feature engineering; the LR part can be updated frequently and suits large-scale sparse online learning.
-- Caveats: GBDT and LR should preferably be trained on **different data**, to avoid LR overfitting on leaf features where the GBDT overfit; high-cardinality ID features are not suitable for direct use in the GBDT. This approach was later superseded by deep CTR models such as FM/FFM, Wide & Deep and DeepFM, but the idea (using tree models as feature transformers) is still common.
+- GBDT handles non-linear discretization and feature crosses. LR handles large-scale sparse features and can be updated online at high frequency.
+- Train GBDT and LR on different data, so LR does not overfit to leaf features from an overfit GBDT.
+- High-cardinality ID features are a poor fit for direct use in GBDT.
+- It was later replaced by deep models such as FM, Wide & Deep and DeepFM, but the idea of using trees to transform features is still common.
 
 Q28: ***Why is GBDT usually preferred over deep learning for tabular data? How do you choose between random forest and GBDT?***
 
-- **GBDT's advantages on tabular data** (see Grinsztajn et al. 2022, *Why do tree-based models still outperform deep learning on tabular data?*):
-    - Tabular features are **heterogeneous** and include many uninformative features; trees perform feature selection naturally and are robust to irrelevant features; MLPs are rotation-invariant and struggle to exploit the "axis-aligned" meaning of features;
-    - Target functions are often **non-smooth with abrupt changes**, which the piecewise-constant structure of trees fits more easily, while neural networks are biased toward smooth functions;
-    - With small to medium data (thousands to hundreds of thousands of rows), trees are less prone to overfitting;
-    - Insensitive to missing values, outliers and scale, so little preprocessing; fast training, low tuning cost, mature interpretability tools (SHAP), simple deployment.
-- **When to consider deep learning**: very large data, unstructured features such as text/images/sequences, need for end-to-end representation learning (embeddings), multi-task/multi-modal setups, online incremental learning; or tabular foundation models (e.g. the TabPFN family is very strong on small datasets). In practice, **ensembles** of GBDT and NNs often work best.
-- **Random forest vs GBDT**:
+**Tabular features are heterogeneous, there are many irrelevant features, and targets often have sharp jumps. Trees select features naturally, fit piecewise functions well, overfit less on small and medium data, need little preprocessing and train fast, so they usually beat neural networks. Random forest makes a robust baseline, while a well-tuned GBDT is usually more accurate.**
+
+- Neural networks prefer smooth functions and are rotation-invariant, so they struggle to use the "axis-aligned" meaning of features (Grinsztajn et al. 2022).
+- Consider deep learning for very large data, unstructured inputs like text or images, or end-to-end representation learning. TabPFN is worth trying on small data, and a GBDT + NN ensemble is often best.
 
 | | Random forest | GBDT |
 |---|---|---|
-| Ensemble method | Bagging, parallel | Boosting, sequential |
-| Reduces | Variance | Bias |
-| Base trees | Deep trees, unpruned | Shallow trees (depth 3–8) |
-| Tuning | Little, default parameters are stable | More, sensitive to learning rate/tree depth |
-| Overfitting | More trees means more stable, hard to overfit | Too many trees overfit, early stopping needed |
-| Noise/outliers | Robust | Fairly sensitive |
-| Accuracy | Good baseline | Usually higher once tuned |
-| Other | OOB estimate, easy to parallelize | Supports any differentiable loss, ranking, etc. |
+| Ensemble type | Bagging, parallel, reduces variance | Boosting, sequential, reduces bias |
+| Base trees | Deep trees | Shallow trees (depth 3–8) |
+| Tuning and overfitting | Few parameters, more trees only helps | Sensitive to learning rate/depth, needs early stopping |
+| Noise | Robust | Fairly sensitive |
 
-- Recommendation: use random forest for a fast, robust baseline, noisy data, or limited tuning resources; use GBDT (XGBoost / LightGBM / CatBoost, preferring CatBoost when there are many categorical features) when chasing maximum accuracy with time to tune.
+- How to choose: use random forest for noisy data or a small tuning budget. Use GBDT for top accuracy, and prefer CatBoost when there are many categorical features.

@@ -2,74 +2,62 @@
 
 Q1.***What is SVM***?
 
-- A Support Vector Machine (SVM) is a supervised learning method used for *classification*, *regression* and *outlier detection*. The goal of the SVM algorithm is to find a hyperplane in an N-dimensional space (N = number of features) that maximizes the margin between the two classes of data in the feature space.
-- SVM only focuses on the points that are hardest to separate (the support vectors), whereas other classifiers pay attention to all points.
+- **An SVM (Support Vector Machine) is a supervised learning method whose core idea is to find a hyperplane in feature space that separates the two classes while making the margin between them as large as possible.**
+- It only cares about the hardest-to-separate points closest to the boundary (the support vectors), not about all samples.
 
 Q2:***What is a hyperplane in SVM***?
 
-- A hyperplane is the decision boundary that helps classify data points. Data points falling on either side of the hyperplane can be attributed to different classes. The dimension of the hyperplane depends on the number of features. If the number of input features is 2, the hyperplane is just a line. If the number of input features is 3, the hyperplane becomes a two-dimensional plane.
-- To separate two classes of data points, there are many possible hyperplanes that could be chosen. Our objective is to find the plane with the maximum margin, i.e. the maximum distance between the data points of the two classes.
+- **The hyperplane is the SVM's decision boundary: points on either side of it are assigned to different classes. It has one dimension fewer than the feature space: with 2 features it is a line, with 3 features it is a plane.**
+- Many hyperplanes can separate the data; SVM picks the one with the largest margin.
 
 ![https://miro.medium.com/max/600/0*0o8xIA4k3gXUDCFU.png](https://miro.medium.com/max/600/0*0o8xIA4k3gXUDCFU.png)
 
 Q3:***What are support vectors in SVM***?
 
-- Support vectors are the data points closest to the hyperplane; if these points of the dataset were removed, the position of the separating hyperplane would change. Using these support vectors, we maximize the margin of the classifier. *Only* the support vectors are used when computing predictions.
+- **Support vectors are the samples closest to the hyperplane, lying exactly on the margin boundary (or inside the margin). They determine where the hyperplane is: remove them and the hyperplane moves; remove any other point and it stays the same.**
+- Prediction also uses only the support vectors, so SVM is a sparse model.
 
 ![https://miro.medium.com/max/1400/0*ecA4Ls8kBYSM5nza.jpg](https://miro.medium.com/max/1400/0*ecA4Ls8kBYSM5nza.jpg)
 
 Q4:***What are hard-margin and soft-margin SVMs***?
 
-- A Hard-Margin SVM has *linearly separable* training data. No data points are allowed inside the margin region. This type of linear classification is called hard-margin classification.
-- A Soft-Margin SVM has training data that is *not linearly separable*. Margin violation means choosing a hyperplane that allows some data points to stay inside the margin region or on the wrong side of the hyperplane.
+- **A hard-margin SVM requires every point to be correctly separated and stay outside the margin, so it only works on linearly separable data; a soft-margin SVM lets a few points fall inside the margin or even be misclassified, at a penalty, so it works on noisy, not perfectly separable data.**
 
 Q5:***What types of SVM kernels do you know***?
 
-- Commonly: the linear kernel, the polynomial kernel, and the Gaussian kernel
+- **The common ones are the linear kernel, the polynomial kernel and the Gaussian (RBF) kernel; there is also the sigmoid kernel.**
 
 Q6:***Why use the kernel trick***?
 
-- When SVM handles data that is not linearly separable, it needs a kernel function to map the data from a low dimension to a higher dimension so that a boundary can be found and the data classified; but as the number of dimensions grows, the computation becomes very expensive. The kernel trick lets us compute on the original (low-dimensional) features while the actual classification effect (via the inner product) takes place in the high-dimensional space. This avoids complex computation directly in the high-dimensional space and truly solves the problem of SVM on linearly non-separable data.
+- **When data is not linearly separable, it has to be mapped into a higher-dimensional space to become separable, but computing there directly is too expensive. The kernel trick computes the high-dimensional inner product directly in the original low-dimensional space, giving the high-dimensional classification effect without ever doing the mapping.**
+- The SVM dual depends only on inner products between samples, so the inner product can simply be replaced by a kernel function.
 
 Q7:***What are the applications of SVM***?
 
-SVM relies on supervised learning algorithms. The goal of using SVM is to correctly *classify* unseen data. *Some common applications of SVM are:
-
-- Face detection: SVMc classifies parts of an image as face and non-face and creates a square boundary around the face.
-- Text and hypertext categorization: SVMs allow text and hypertext categorization for both inductive and transductive models. They use training data to classify documents into different categories. Classification is based on the generated score, which is then compared with a threshold.
-- Image classification: using SVMs provides better search accuracy for image classification. It offers higher accuracy compared with traditional query-based search techniques.
-- Bioinformatics: this includes protein classification and cancer classification. We use SVM to identify the classification of genes, patients based on genes, and other biological problems.
-- Protein fold and remote homology detection: SVM algorithms are applied to protein remote homology detection.
-- Handwriting recognition: we use SVMs to recognize widely used handwritten characters.
-- Generalized Predictive Control (GPC): SVM-based GPC is used to control chaotic dynamics with useful parameters.
+- **SVM is mainly used for classification. Typical applications are face detection, text classification, image classification, bioinformatics (protein and cancer classification) and handwriting recognition; it suits tasks with few samples and many dimensions especially well.**
 
 Q8:***Name some advantages of SVM***?
 
-- Guaranteed optimality: owing to the nature of convex optimization, the solution will always be a global minimum rather than a local minimum.
-- Abundant implementations: we can access it conveniently, whether from Python or Matlab.
-- SVM can be used for both *linearly separable* and *non-linearly separable* data. Linearly separable data uses a hard margin, while non-linearly separable data uses a soft margin.
-- SVM *fits* semi-supervised learning models. It can be used in settings where data is both labeled and unlabeled. It only requires a condition on the minimization problem, known as the Transductive SVM.
-- *Feature Mapping* used to place a heavy burden on the computational complexity of the model's overall training performance. However, with the help of the Kernel Trick, SVM can perform feature mapping using simple dot products.
+- **SVM is a convex optimization problem, so it is guaranteed to reach the global optimum; the kernel trick lets it handle non-linear problems; and because it depends only on support vectors, it generalizes well on small, high-dimensional datasets.**
+- The soft margin makes it work on both linearly separable and non-separable data.
 
 Q9:***For an `N`-dimensional dataset, what is the minimum possible number of support vectors? (Assume the data is perfectly linearly separable)***
 
-- *Regardless* of the *dimensionality* or size of the dataset, the number of support vectors can be as few as `2`.
+- **At least 2 (one per class), regardless of the dimension or the number of samples.**
 
 Q10:***What happens when there is no clear hyperplane in SVM?***
 
-- Data is rarely as clean as a hyperplane, which is a line that linearly separates and classifies a set of data. To classify the dataset, it is necessary to move from a 2D view of the data to a 3D view.
-- This "lifting" of the data points represents *mapping* the data into a *higher dimension*. This is called kernelling.
+- **If no hyperplane can separate the data in the original space, the data is mapped into a higher-dimensional space and a linear hyperplane is found there; this is done through a kernel function and is called kernelization.**
 
 ![https://66.media.tumblr.com/9bffea56372d28d2a30f80557451e824/tumblr_inline_o9aabehtqP1u37g00_540.png](https://66.media.tumblr.com/9bffea56372d28d2a30f80557451e824/tumblr_inline_o9aabehtqP1u37g00_540.png)
 
 Q11:***What is the hinge loss in SVM?***
 
-- The hinge loss function is mainly associated with soft-margin SVMs. It incorporates the margin, or distance from the classification boundary, into the cost calculation. Even if new observations are classified correctly, they are penalized if their distance from the decision boundary is not large enough. The hinge loss increases linearly.
-- The main purpose of introducing the hinge loss is to penalize misclassified samples in soft-margin SVM.
-- The hinge loss formula is: $\min_{w,b}\ \sum_{i=1}^{n}\max\left(0,\ 1-y_i(w^Tx_i+b)\right)+\lambda\|w\|^2$, where the first term is the misclassification loss (the hinge loss of a single sample is $\max(0, 1-y_i f(x_i))$, which is 0 when the functional margin $y_i f(x_i)\ge 1$) and the second term is the margin distance (a regularizer: the smaller $\|w\|$, the larger the margin $\frac{2}{\|w\|}$); setting $\lambda=\frac{1}{2C}$ makes it equivalent to the primal problem of soft-margin SVM.
-    
-    ![https://app.yinxiang.com/shard/s24/res/8d14cae8-d22f-499a-aeb8-7a8e535fc62b.gif](https://app.yinxiang.com/shard/s24/res/8d14cae8-d22f-499a-aeb8-7a8e535fc62b.gif)
-    
+- **The hinge loss is the loss used by the soft-margin SVM: when a sample is correctly classified and far enough from the boundary (functional margin ≥ 1) the loss is 0; otherwise the loss grows linearly with the distance. So even a correctly classified point is penalized if it is too close to the boundary.**
+- The soft-margin SVM is equivalent to "hinge loss + L2 regularization": the regularizer makes $\|w\|$ small, i.e. the margin large.
+- Key formula: $\max(0,\ 1-y_i f(x_i))$
+
+![https://app.yinxiang.com/shard/s24/res/8d14cae8-d22f-499a-aeb8-7a8e535fc62b.gif](https://app.yinxiang.com/shard/s24/res/8d14cae8-d22f-499a-aeb8-7a8e535fc62b.gif)
 
 ![https://miro.medium.com/max/575/1*PGqpYm7o5GCbDXxXErr2JA.png](https://miro.medium.com/max/575/1*PGqpYm7o5GCbDXxXErr2JA.png)
 
@@ -77,231 +65,219 @@ Reference: [https://programmathically.com/understanding-hinge-loss-and-the-svm-c
 
 Q12:***The role of the hyperparameter C in SVM***
 
-- C: the penalty coefficient C of the objective function, used in soft-margin SVM to balance the classification margin and the loss from misclassified samples;
+- **C is the penalty coefficient for misclassified samples in the soft-margin SVM; it trades off "margin as wide as possible" against "as few errors as possible". A larger C tolerates fewer errors, a smaller C tolerates more.**
 
 Q13: ***Describe the hyperparameters commonly used when designing an SVM classifier***
 
-- An SVM model has two very important parameters, C and gamma. C is the penalty coefficient, i.e. the tolerance for errors. A higher C means errors are less tolerated, which easily leads to overfitting. A smaller C easily leads to underfitting. A C that is too large or too small will both worsen generalization ability; gamma is a parameter that comes with the RBF function once it is chosen as the kernel. It implicitly determines the distribution of the data after it is mapped into the new feature space: the larger gamma is, the fewer support vectors; the smaller gamma is, the more support vectors. The number of support vectors affects the speed of training and prediction.
+- **The most important ones are the penalty coefficient C and the RBF kernel's gamma, plus the kernel type (and the degree for a polynomial kernel).**
+- C: larger means less tolerance for errors and a risk of overfitting; smaller risks underfitting.
+- gamma: sets how far a single sample's influence reaches; larger means a smaller reach, a more curved boundary, usually more support vectors, and a risk of overfitting; smaller gives a smoother boundary.
 
 Q14:***Compare the KNN algorithm with the SVM algorithm***
 
-- KNN has no training process; it simply measures distances between the data and the training data to perform classification; SVM requires training to determine the parameters of the hyperplane;
-- KNN uses all training sample points at prediction time and is a non-sparse model; SVM uses only the support vectors and is a sparse model;
-- KNN has only one parameter, k, while SVM has more parameters, including the coefficient of the slack variables and the specific kernel function;
+- **KNN has no training step and computes distances to all training samples at prediction time; SVM must be trained to find a hyperplane and uses only the support vectors at prediction time.**
+- KNN is a non-sparse model with slow prediction and large storage; SVM is a sparse model.
+- KNN essentially has only the parameter k; SVM requires tuning C, the kernel and its parameters.
 
 Q15:***What is the difference between using SVM for classification and for regression?***
 
-- The difference between SVR regression and SVM classification is that in SVR the sample points ultimately belong to only one class, and the optimal hyperplane it seeks is not one that separates two or more classes of sample points "as far apart as possible" as in SVM, but one that minimizes the total deviation of all sample points from the hyperplane.
-- SVM maximizes the "distance" of the sample points closest to the hyperplane; SVR minimizes the "distance" of the sample points farthest from the hyperplane. Reference: [https://www.cnblogs.com/belter/p/8975606.html](https://www.cnblogs.com/belter/p/8975606.html)
+- **SVM classification makes the points closest to the hyperplane as far away as possible, i.e. separates the two classes as widely as possible; SVR regression tries to fit all samples inside a "tube" around the hyperplane, so that their deviation from the hyperplane is as small as possible.**
+
+Reference: [https://www.cnblogs.com/belter/p/8975606.html](https://www.cnblogs.com/belter/p/8975606.html)
 
 Reference: https://www.quora.com/What-is-the-main-difference-between-a-SVM-and-SVR
 
 Q16:***What is a convex hull?***
 
-- The convex hull of a set of points is defined as the smallest convex polygon that encloses all the points in the set. Convex means the polygon has no corners that bend inwards. In the figure below, the left is a convex polygon and the right is a non-convex polygon.
-    
-    ![https://miro.medium.com/max/560/1*xuqyWJ49_oNxrXGE6TehVw.png](https://miro.medium.com/max/560/1*xuqyWJ49_oNxrXGE6TehVw.png)
-    
+- **The convex hull of a set of points is the smallest convex polygon (one with no inward-bending corners) that encloses all of them.**
+- Link to SVM: for linearly separable data, the maximum-margin hyperplane is the perpendicular bisector of the segment joining the closest points of the two classes' convex hulls. In the figure below, the left is a convex polygon and the right is non-convex.
+
+![https://miro.medium.com/max/560/1*xuqyWJ49_oNxrXGE6TehVw.png](https://miro.medium.com/max/560/1*xuqyWJ49_oNxrXGE6TehVw.png)
 
 Q17:***How can SVM be used for anomaly detection?***
 
-- Use a one-class SVM to detect anomalies in the data. The basic idea is to train a hypersphere with SVM that separates normal data from abnormal data: if a data point lies inside the hypersphere, it is judged to belong to the data distribution; otherwise, it is judged to be an outlier.
+- **Use a One-class SVM: train only on normal data and learn a boundary (a hyperplane or hypersphere) that encloses it; a new sample inside the boundary is normal, one outside is an anomaly.**
 
 Q18: ***Compare SVM and logistic regression***
 
-- Both are supervised classification models
-- LR is sensitive to outliers; SVM is not sensitive to outliers. SVM only considers local points near the boundary, while logistic regression considers the global picture (points far away also contribute to determining the boundary, although their effect is relatively smaller). The hyperplane found by the LR model tries to keep all points as far from it as possible, whereas the hyperplane sought by SVM only keeps the points closest to the separating line as far away as possible, i.e. only the support vector samples are used
-- Different loss functions: logistic regression uses cross-entropy loss, SVM uses hinge loss
-- Different computational complexity: for massive data, SVM is less efficient and LR is more efficient
-- Different ways of handling non-linear problems: LR relies mainly on feature construction and must combine cross features and discretize features, while SVM relies mainly on the kernel trick
+- **Both are linear classifiers; the main difference is the loss: LR uses cross-entropy (log loss) and every sample contributes, while SVM uses the hinge loss and is determined only by the support vectors near the boundary.**
+- Outliers: SVM only looks at points near the boundary, so it is insensitive to distant outliers; in LR every point contributes, so it is more easily affected.
+- Non-linearity: SVM relies on the kernel trick; LR relies mainly on feature engineering (feature crosses, discretization).
+- Efficiency: on massive data LR is faster; kernel SVM is very slow.
 
 Q19:***Explain what the kernel trick is***
 
-- For a training set that is not linearly separable, a kernel function is needed to non-linearly map it into a high-dimensional space to turn it into a linearly separable dataset; when the dimension is very high, one has to compute the mapped vectors $\phi(x)$, $\phi(y)$ separately and then compute their inner product $\langle\phi(x),\phi(y)\rangle$ (the inner product is needed because the SVM solution formula contains inner product operations), which is computationally very expensive;
-    
-    ![https://app.yinxiang.com/shard/s24/res/f3d68831-c5ee-4e9c-8737-49753082af57.gif](https://app.yinxiang.com/shard/s24/res/f3d68831-c5ee-4e9c-8737-49753082af57.gif)
-    
-    ![https://app.yinxiang.com/shard/s24/res/d8e584b8-ff97-4155-8df7-b0e131e2f32a.gif](https://app.yinxiang.com/shard/s24/res/d8e584b8-ff97-4155-8df7-b0e131e2f32a.gif)
-    
-    ![https://app.yinxiang.com/shard/s24/res/44a1a853-026a-40fe-8752-da1d7302a9de.gif](https://app.yinxiang.com/shard/s24/res/44a1a853-026a-40fe-8752-da1d7302a9de.gif)
-    
-- The kernel trick means finding a kernel function $K$ such that $K(x,y)=\langle\phi(x),\phi(y)\rangle$, so that one only needs to compute the value of the kernel function in the low-dimensional space, without first mapping the data into the high-dimensional space, saving a large amount of computation.
-    
-    ![https://app.yinxiang.com/shard/s24/res/8be1a479-ee3c-45c8-aac4-aa5f44f02ed6.gif](https://app.yinxiang.com/shard/s24/res/8be1a479-ee3c-45c8-aac4-aa5f44f02ed6.gif)
-    
+- **The kernel trick means finding a kernel function $K$ whose value, computed in the original low-dimensional space, equals the inner product after mapping to the high-dimensional space. This gives the high-dimensional classification effect without explicitly computing the mapping $\phi(x)$.**
+- Only inner products are needed because the SVM dual problem and decision function contain only inner products between samples.
+- Key formula: $K(x,y)=\langle\phi(x),\phi(y)\rangle$
+
+![https://app.yinxiang.com/shard/s24/res/f3d68831-c5ee-4e9c-8737-49753082af57.gif](https://app.yinxiang.com/shard/s24/res/f3d68831-c5ee-4e9c-8737-49753082af57.gif)
+
+![https://app.yinxiang.com/shard/s24/res/d8e584b8-ff97-4155-8df7-b0e131e2f32a.gif](https://app.yinxiang.com/shard/s24/res/d8e584b8-ff97-4155-8df7-b0e131e2f32a.gif)
+
+![https://app.yinxiang.com/shard/s24/res/44a1a853-026a-40fe-8752-da1d7302a9de.gif](https://app.yinxiang.com/shard/s24/res/44a1a853-026a-40fe-8752-da1d7302a9de.gif)
+
+![https://app.yinxiang.com/shard/s24/res/8be1a479-ee3c-45c8-aac4-aa5f44f02ed6.gif](https://app.yinxiang.com/shard/s24/res/8be1a479-ee3c-45c8-aac4-aa5f44f02ed6.gif)
 
 Reference: [https://www.fanyeong.com/2017/11/13/the-kernel-trick/](https://www.fanyeong.com/2017/11/13/the-kernel-trick/)
 
 Q20:***Compare random forest and SVM: in what situations would you prefer random forest (or SVM)?***
 
-- SVM has an advantage on small datasets with few extreme values, while random forest needs more data but can generally produce very good and robust models.
-- SVM has no strategy for handling missing values, whereas decision trees do (missing data means some feature data is missing and the vector data is incomplete; SVM needs to find a separating plane in the feature space and is strongly affected by missing data)
+- **Prefer SVM for small, high-dimensional data with few outliers; prefer random forest when there is more data, mixed feature types or missing values, since it is usually more robust and needs less tuning.**
+- SVM has no mechanism for missing values while decision trees do; SVM depends on distances in feature space, so missing features hurt it a lot.
 
 Q21:***Compare SVM and deep learning***
 
-- Intuitive difference: deep learning stacks many neural network layers to learn increasingly abstract representations of the data in a hierarchical manner; SVM finds a separating boundary among the data points (a hyperplane in the linearly separable case) that is as far as possible from the support vectors of either class;
-- Deep learning is relatively uninterpretable, while SVM is backed by strong mathematical derivation;
-- Sensitivity to weight initialization: because neural networks use gradient descent, they are sensitive to the initial randomization of their weight matrices. This is because if the initial randomization places the network close to a local minimum of the optimization function, the accuracy will never rise above a certain threshold. In contrast, SVMs are more reliable: regardless of their initial configuration, they are guaranteed to converge to the global minimum.
-- On multi-class problems, deep learning is more convenient; SVM needs multiple SVM classifiers to handle multi-class problems, while deep learning needs only a single neural network.
-- When the number of features exceeds the number of samples, SVM performs poorly; SVM requires more work on feature engineering;
+- **SVM finds a maximum-margin boundary on fixed features: the optimization is convex, has a global optimum and the theory is clear; deep learning stacks layers to learn hierarchical feature representations automatically, which is far more expressive but needs lots of data and the optimization is non-convex.**
+- Interpretability: SVM is backed by a complete mathematical derivation; deep networks are closer to a black box.
+- Optimization: neural networks use gradient descent, are sensitive to initialization and can get stuck in local optima; SVM converges to the global optimum regardless of initialization.
+- Multi-class: a single neural network suffices; SVM needs to combine several binary classifiers.
 
 Q22:***In which situations is SVM not suitable?***
 
-- If the feature dimension is far greater than the number of samples, SVM performs only moderately.
-- When the sample size is very large and the kernel mapping dimension is very high, SVM's computational cost is too large, so it is not very suitable.
-- When there is a large amount of missing data (some feature data is missing and the vector data is incomplete): SVM wants the samples to be linearly separable in the feature space, so the quality of the feature space is important for SVM's performance. Missing feature data will affect the quality of the training results.
-- Multi-class problems
+- **SVM is a poor fit for very large datasets (kernel SVM trains too slowly), data with many missing values, multi-class problems, and cases where the feature dimension is far larger than the number of samples.**
 
 Q23:***Explain what support vectors are?***
 
-- Support vectors are the data points closest to the separating hyperplane; if these points of the dataset were removed, the position of the separating hyperplane would change. Using these support vectors, we maximize the margin of the classifier. *Only* the support vectors are used when computing predictions.
+- **Support vectors are the samples closest to the separating hyperplane, and only they determine its position: removing them changes the hyperplane, removing other points does not. Prediction also uses only the support vectors.**
 
 Q24:***Provide an intuitive explanation of the soft-margin Support Vector Machine (SVM)***
 
-- **Intuition**: real data usually contains noise or a few outliers. Strictly requiring every point to lie outside the margin (hard margin) may have no solution at all, or may yield a hyperplane with a very narrow margin and poor generalization just to accommodate a few outliers. Soft-margin SVM allows a few points to "cross the line" — fall inside the margin or even be misclassified — but each violation has a cost, so it trades off "**a margin as wide as possible**" against "**as few errors as possible**".
-- **Mathematical form**: introduce a slack variable $\xi_i\ge 0$ for each sample, measuring how much it violates the margin:
-
-$$
-\min_{w,b,\xi}\ \frac{1}{2}\|w\|^2 + C\sum_{i=1}^{n}\xi_i \quad \text{s.t.}\ \ y_i(w^Tx_i+b)\ge 1-\xi_i,\ \ \xi_i\ge 0
-$$
-
-- $\xi_i=0$: the point is on or outside the margin boundary and correctly classified; $0<\xi_i\le 1$: the point is inside the margin but still correctly classified; $\xi_i>1$: the point is misclassified.
-- **Role of C**: the larger C, the higher the cost of violations and the closer to a hard margin (narrow margin, prone to overfitting); the smaller C, the more violations are tolerated (wider, smoother margin, possibly underfitting).
-- **Equivalent view**: eliminating the slack variables gives $\xi_i=\max(0, 1-y_i(w^Tx_i+b))$, so soft-margin SVM is equivalent to empirical risk minimization with "hinge loss + L2 regularization" (see Q11). In the dual problem the only change is an upper bound on the Lagrange multipliers: $0\le\alpha_i\le C$.
+- **Real data has noise and outliers, so a hard margin may have no solution, or may end up very narrow just to accommodate a few outliers. The soft margin lets a few points cross the line (fall inside the margin or even be misclassified), but every violation costs something; in essence it trades off "margin as wide as possible" against "as few errors as possible".**
+- Each sample gets a slack variable $\xi_i$ for how much it violates the margin: 0 means outside the margin, between 0 and 1 means inside the margin but correctly classified, above 1 means misclassified.
+- A larger C is closer to a hard margin (narrow margin, overfitting risk); a smaller C is more tolerant (wide margin, possible underfitting).
+- It is equivalent to "hinge loss + L2 regularization" (see Q11); in the dual it only shows up as an upper bound on the multipliers, $0\le\alpha_i\le C$.
+- Key formula: $\min\ \frac{1}{2}\|w\|^2 + C\sum_i\xi_i$, subject to $y_i(w^Tx_i+b)\ge 1-\xi_i,\ \xi_i\ge 0$
 
 Q25:***Explain the convex optimization problem in SVM***
 
-- The goal of convex optimization is to solve extremum problems of functions with constraints. The general model is $\min_x f(x)\ \ \text{s.t.}\ g_i(x)\le 0\ (i=1,\dots,m),\ h_j(x)=0\ (j=1,\dots,p)$, and the following three conditions must all be satisfied: the objective $f(x)$ is a convex function, the inequality constraints $g_i(x)$ are convex functions, and the equality constraints $h_j(x)$ are affine functions;
-    
-    ![https://app.yinxiang.com/shard/s24/res/bbd4d0b0-071c-4661-bf9a-ec42d7014c74.gif](https://app.yinxiang.com/shard/s24/res/bbd4d0b0-071c-4661-bf9a-ec42d7014c74.gif)
-    
-    ![https://app.yinxiang.com/shard/s24/res/cb08997e-1d24-4cf3-86f8-a62e813f3df4.gif](https://app.yinxiang.com/shard/s24/res/cb08997e-1d24-4cf3-86f8-a62e813f3df4.gif)
-    
-    ![https://app.yinxiang.com/shard/s24/res/bd9293e2-da82-46ef-9835-d2d11c982742.gif](https://app.yinxiang.com/shard/s24/res/bd9293e2-da82-46ef-9835-d2d11c982742.gif)
-    
-    ![https://app.yinxiang.com/shard/s24/res/aa4102c0-7780-4825-87d4-2089b018264f.gif](https://app.yinxiang.com/shard/s24/res/aa4102c0-7780-4825-87d4-2089b018264f.gif)
-    
-- The primal problem of SVM is $\min_{w,b}\ \frac{1}{2}\|w\|^2\ \ \text{s.t.}\ 1-y_i(w^Tx_i+b)\le 0,\ i=1,\dots,n$, where $\frac{1}{2}\|w\|^2$ is a typical convex function, and the highest order of the constraint is only first order, so it is indeed an affine function; therefore the primal problem is a convex optimization problem, which can be converted into an unconstrained problem via the Lagrangian method and then solved through its dual problem.
-    
-    ![https://app.yinxiang.com/shard/s24/res/4a63af41-25e5-41ff-a5eb-0be2213030a9.gif](https://app.yinxiang.com/shard/s24/res/4a63af41-25e5-41ff-a5eb-0be2213030a9.gif)
-    
-    ![https://app.yinxiang.com/shard/s24/res/6c214eb0-6937-4e6f-b1e0-96a12199fc25.gif](https://app.yinxiang.com/shard/s24/res/6c214eb0-6937-4e6f-b1e0-96a12199fc25.gif)
-    
+- **Convex optimization requires a convex objective, convex inequality constraints and affine equality constraints, so that any local optimum is the global optimum. The SVM primal minimizes $\frac{1}{2}\|w\|^2$ (a convex quadratic) under constraints that are linear inequalities in $w,b$, so it is a convex quadratic program.**
+- In practice it is converted to the dual problem with the Lagrangian method and the dual is solved.
+
+![https://app.yinxiang.com/shard/s24/res/bbd4d0b0-071c-4661-bf9a-ec42d7014c74.gif](https://app.yinxiang.com/shard/s24/res/bbd4d0b0-071c-4661-bf9a-ec42d7014c74.gif)
+
+![https://app.yinxiang.com/shard/s24/res/cb08997e-1d24-4cf3-86f8-a62e813f3df4.gif](https://app.yinxiang.com/shard/s24/res/cb08997e-1d24-4cf3-86f8-a62e813f3df4.gif)
+
+![https://app.yinxiang.com/shard/s24/res/bd9293e2-da82-46ef-9835-d2d11c982742.gif](https://app.yinxiang.com/shard/s24/res/bd9293e2-da82-46ef-9835-d2d11c982742.gif)
+
+![https://app.yinxiang.com/shard/s24/res/aa4102c0-7780-4825-87d4-2089b018264f.gif](https://app.yinxiang.com/shard/s24/res/aa4102c0-7780-4825-87d4-2089b018264f.gif)
+
+![https://app.yinxiang.com/shard/s24/res/4a63af41-25e5-41ff-a5eb-0be2213030a9.gif](https://app.yinxiang.com/shard/s24/res/4a63af41-25e5-41ff-a5eb-0be2213030a9.gif)
+
+![https://app.yinxiang.com/shard/s24/res/6c214eb0-6937-4e6f-b1e0-96a12199fc25.gif](https://app.yinxiang.com/shard/s24/res/6c214eb0-6937-4e6f-b1e0-96a12199fc25.gif)
 
 Q26:***What is the polynomial kernel?***
 
-- The polynomial kernel relies on a polynomial function to map data into a high-dimensional space, making originally linearly non-separable data linearly separable. Its mathematical form is $K(x,y)=(\gamma\, x^Ty+r)^p$ ($\gamma>0$, $r\ge 0$ is the constant term, $p$ is the polynomial degree)
-    
-    ![https://app.yinxiang.com/shard/s24/res/ed13238c-98af-4a65-a531-beee76ef7da3.gif](https://app.yinxiang.com/shard/s24/res/ed13238c-98af-4a65-a531-beee76ef7da3.gif)
-    
-- The polynomial kernel function can map a low-dimensional input space into a high-dimensional feature space. It is suitable for orthonormalized data (vectors that are orthogonal with norm 1) and is a global kernel function, allowing data points that are far apart to influence the value of the kernel function. The larger the parameter p, the higher the mapped dimension, leading to a more complex model that may overfit. Conversely, a parameter p that is too small leads to underfitting.
+- **The polynomial kernel uses a polynomial function to implicitly map data into a higher-dimensional space, making originally non-separable data linearly separable.**
+- It is a global kernel: even distant points affect the kernel value.
+- A larger degree p means a higher-dimensional mapping and a more complex model, risking overfitting; too small a p may underfit.
+- Key formula: $K(x,y)=(\gamma\, x^Ty+r)^p$
+
+![https://app.yinxiang.com/shard/s24/res/ed13238c-98af-4a65-a531-beee76ef7da3.gif](https://app.yinxiang.com/shard/s24/res/ed13238c-98af-4a65-a531-beee76ef7da3.gif)
 
 Reference: https://www.pycodemates.com/2022/10/svm-kernels-polynomial-kernel.html
 
 Q27***:What is the Gaussian (RBF) kernel function?***
 
-- The Gaussian kernel function maps the original space into an infinite-dimensional space. Its mathematical form is $K(x,y)=\exp\left(-\frac{\|x-y\|^2}{2\sigma^2}\right)=\exp\left(-\gamma\|x-y\|^2\right)$, with $\gamma=\frac{1}{2\sigma^2}$; because the shape of the function is close to a Gaussian distribution, it is called the Gaussian kernel function;
-    
-    ![https://app.yinxiang.com/shard/s24/res/19dcaf08-349c-44db-9b7e-6c45d59c3758.gif](https://app.yinxiang.com/shard/s24/res/19dcaf08-349c-44db-9b7e-6c45d59c3758.gif)
-    
-- The Gaussian radial basis function is a strongly local kernel function that can map a sample into a higher-dimensional space. It is the most widely used kernel, performing well for both large and small samples, and it has fewer parameters than the polynomial kernel. Therefore, **in most cases, when you do not know which kernel function to use, the Gaussian kernel is the first choice**.
+- **The Gaussian kernel measures similarity from the distance between two samples: close points give a value near 1, distant points a value near 0; it is equivalent to mapping data into an infinite-dimensional space.**
+- It is a local kernel: only nearby points influence each other noticeably.
+- It has few parameters and works well on both small and large datasets; **when you don't know which kernel to use, RBF is usually the first choice**.
+- Key formula: $K(x,y)=\exp\left(-\gamma\|x-y\|^2\right)$, where $\gamma=\frac{1}{2\sigma^2}$
+
+![https://app.yinxiang.com/shard/s24/res/19dcaf08-349c-44db-9b7e-6c45d59c3758.gif](https://app.yinxiang.com/shard/s24/res/19dcaf08-349c-44db-9b7e-6c45d59c3758.gif)
 
 Q28:***What is the difference between a decision boundary and a hyperplane***?
 
-- A hyperplane is a subspace of a space whose dimension is one less than that of the space it lives in. If the data space itself is three-dimensional, its hyperplane is a two-dimensional plane; if the data space itself is two-dimensional, its hyperplane is a one-dimensional line.
-- A decision boundary is a subset of hyperplanes. In a binary classification problem, if a hyperplane can divide the data into two sets, each containing a single class, we say that this hyperplane is the "decision boundary" of the data.
+- **A hyperplane is a geometric concept: a subspace one dimension lower than the surrounding space (a line in 2D, a plane in 3D); a decision boundary is a functional concept: the boundary that separates the classes.**
+- In a linear SVM the decision boundary is exactly a hyperplane; with a kernel, the decision boundary is usually a curved surface in the original space.
 
 Q29:***How does redundant data affect the performance of SVM***?
 
-- Redundant data/features in a dataset can worsen SVM's classification performance. Redundant features introduce a lot of unnecessary accumulated noise when the original data is mapped to a high dimension, adversely affecting SVM's choice of the separating surface.
+- **Redundant or irrelevant features degrade SVM classification: they add extra noise when mapped to high dimensions and distort the distance and inner-product computations, which hurts the choice of separating surface. That is why feature selection is usually done before using SVM.**
 
 Reference: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4709852/
 
 Q30:***Explain the role of the Lagrangian method in the SVM algorithm***
 
-- The Lagrange multiplier method converts the constrained convex quadratic programming problem in SVM into an unconstrained problem, then, based on Slater's condition, converts it into the Lagrangian dual problem, and the parameters w, b of the primal problem are solved via the KKT conditions;
+- **The Lagrange multiplier method turns the SVM's constrained convex quadratic program into a Lagrangian, then uses strong duality (Slater's condition holds) to turn it into the dual problem, and finally recovers $w$ and $b$ from the multipliers via the KKT conditions.**
 
 Q31:***Explain the role of the dual problem in SVM***
 
-- The important role of the Lagrangian dual is to bring the computation of w, b forward and eliminate w, b, so that the optimization function becomes a single-parameter optimization problem over the Lagrange multipliers, making the problem easier to solve
-- The dual problem naturally introduces kernel functions, thereby extending to non-linear classification problems
+- **The dual eliminates $w$ and $b$, turning the optimization into a problem over the Lagrange multipliers only, which is easier to solve; more importantly, the dual contains only inner products between samples, so kernel functions can be introduced naturally to handle non-linear classification.**
 
 Q32:***How does the value of the hyperparameter C affect SVM***?
 
-- When the penalty coefficient C is relatively large, our `loss function will also be larger`, which means we are `unwilling to give up outliers that are relatively far away`. As a result we will `have more support vectors`, which means `the model of support vectors and hyperplane will become more complex and more prone to overfitting`.
-- When the penalty coefficient C is relatively small, it means we `do not want to bother with those outliers`, and will choose `fewer samples as support vectors`, so the final model of support vectors and hyperplane will also be simple. The default value of C in `scikit-learn` is 1
+- **A larger C penalizes misclassified samples more heavily, so the model tries not to give up on any outlier: the margin narrows, the boundary gets more complex, and it overfits more easily; a smaller C tolerates outliers more, giving a wider margin and a simpler model, but possibly underfitting.**
+- In scikit-learn, C defaults to 1.
 
 Q33:***How does the value of the hyperparameter gamma affect SVM***?
 
-- When `γ` is relatively small, `a single sample has a relatively small influence on the whole separating hyperplane and is less likely to be selected as a support vector`
-- When `γ` is relatively large, `a single sample has a relatively large influence on the whole separating hyperplane and is more likely to be selected as a support vector**`, or in other words the model will have more support vectors overall. The default value in `scikit-learn` is `1/n_features`
+- **gamma controls how far a single sample's influence reaches in the RBF kernel. A small gamma means each sample influences a wide area and the decision boundary is smooth; a large gamma means a small area, a more curved boundary, usually more support vectors, and a tendency to overfit.**
+- In scikit-learn the default is `gamma='scale'`, i.e. `1/(n_features * X.var())` (older versions defaulted to `1/n_features`).
 
 Q34:***Is there a relationship between the number of support vectors and the performance of an SVM classifier***?
 
-- The more support vectors, the more complex the model and the more prone SVM is to overfitting
-- The fewer support vectors, the simpler the model and the more prone SVM is to underfitting
+- **Yes: more support vectors usually means a more complex model that overfits more easily and predicts more slowly; very few support vectors means a simple model that may underfit.**
 
 Q35:***What is a structured support vector machine***?
 
-- Structured SVM is a generalization of SVM. Unlike a regular SVM, which only considers univariate predictions (such as classification and regression), a structured SVM allows structured outputs (e.g. trees, sequences, sets).
+- **A structured SVM generalizes the SVM: a regular SVM outputs a single label or value, while a structured SVM can output structured objects such as sequences, trees or sets.**
 
 Q36:***Explain the idea of the SMO algorithm***;
 
-- Simple version: the SMO algorithm decomposes a large optimization problem into multiple small optimization problems. These small problems are usually easy to solve, and solving them sequentially gives exactly the same result as solving them as a whole
-- Detailed version: the SMO algorithm is a heuristic algorithm. Its basic idea is: **if the solutions of all variables satisfy the KKT conditions (Karush-Kuhn-Tucker conditions) of this optimization problem, then the solution of the optimization problem has been obtained, because the KKT conditions are necessary and sufficient conditions for this optimization problem**. Otherwise, choose two variables, fix the other variables, and build a quadratic programming problem with respect to these two variables. The solution of this quadratic programming problem with respect to the two variables should be closer to the solution of the original quadratic programming problem, because it makes the objective function value of the original quadratic programming problem smaller. Importantly, the subproblem can then be solved analytically, which greatly improves the computational speed of the whole algorithm.
+- **SMO is an efficient algorithm for solving the SVM dual: each step picks just two Lagrange multipliers to optimize while fixing the rest; this two-variable subproblem has a closed-form solution, and the process repeats until all multipliers satisfy the KKT conditions.**
+- Why two: the dual has the equality constraint $\sum_i\alpha_i y_i=0$, so changing only one multiplier would break it.
+- Every step decreases the objective, and the subproblems need no numerical optimization, so it is fast.
 
 Q37:***State the respective advantages of using support vector machines versus logistic regression for classification***
 
-- SVM is less affected by outliers in the data, because it only cares about the points closest to the decision boundary; logistic regression attends to all data and is easily affected by outliers
-- Logistic regression trains fast and is suitable for large batches of training data
-- For non-linear data spaces, SVM is faster (the kernel trick can be used to optimize the computation)
+- **SVM's advantages are that it only cares about points near the boundary, so it is insensitive to outliers, and that it handles non-linear problems efficiently with the kernel trick; logistic regression's advantages are fast training, suitability for large-scale data, and directly outputting probabilities.**
 
 Q38***:When should you use SVM, and when should you use logistic regression***?
 
-- When the data contains many anomalies/outliers, use SVM
-- When the feature dimension is far greater than the number of data samples, use logistic regression; when the feature dimension is relatively large, use SVM
-- When processing large batches of data, SVM is not efficient
+- **Use logistic regression for large datasets; use (kernel) SVM for small-to-medium data, data with many outliers, or data with non-linear structure.**
+- When the feature dimension is far larger than the number of samples, the data is often already linearly separable, so use logistic regression or a linear SVM.
+- With few features and a moderate number of samples, use an RBF-kernel SVM.
+- With a very large number of samples, kernel SVM is inefficient; use logistic regression or a linear SVM.
 
 Q39:***What are slack variables in SVM***?
 
-- The constraint of hard-margin SVM is $y_{i}(wx_{i}+b)\geq 1$. To handle data that is not strictly linearly separable, soft-margin SVM introduces slack variables $\xi _{i}$, and the constraint after introducing them is $y_{i}(wx_{i}+b)\geq 1-\xi _{i}$, $\xi_i\ge 0$
-- The slack variable $\xi _{i}$ is the functional distance of a data point to its separating boundary. Originally the functional distance from a data point to the separating surface was required to be greater than or equal to 1; now this is relaxed to the functional distance from a data point to the separating surface being greater than or equal to $1-\xi _{i}$, which is a form of tolerance for anomalous outliers.
+- **A slack variable $\xi_i$ is the per-sample "tolerance" introduced by the soft-margin SVM, measuring how much that sample violates the margin constraint. The hard margin requires a functional margin of at least 1; the soft margin relaxes this to at least $1-\xi_i$, tolerating noise and outliers.**
+- A larger $\xi_i$ means a worse violation, and above 1 means misclassified; the objective penalizes them with $C\sum_i\xi_i$.
 
 Q40:***The meaning of the parameters C and gamma in SVM***
 
-- C, also called the penalty factor, is the parameter in SVM that controls errors. The optimization objective of soft-margin SVM is $min\frac{1}{2}w^{T}w+C\sum_{i=1}^{n}\xi _{i}$; the larger C is, the more the model pays attention to misclassified points;
-- The gamma parameter is a parameter of the Gaussian kernel. Gamma determines how much curvature the SVM needs in the decision boundary: a larger gamma means more curvature, a lower gamma means less curvature.
+- **C is the penalty factor that controls tolerance for misclassified samples: the larger C, the more the model focuses on misclassified points; gamma is the RBF kernel parameter that determines how curved the decision boundary is: larger gamma gives a more curved boundary, smaller gamma a smoother one.**
 
 Reference: [https://www.quora.com/What-are-C-and-gamma-with-regards-to-a-support-vector-machine](https://www.quora.com/What-are-C-and-gamma-with-regards-to-a-support-vector-machine)
 
 Q41:***How would you use SVM to classify non-linearly separable data***
 
-- Add slack variables and a penalty factor to find the "relatively best" hyperplane that classifies the data as correctly as possible;
-- Map the low-dimensional (linearly non-separable) data into a high-dimensional space so that the data is linearly separable there, and introduce kernel functions to solve the problem of complex high-dimensional computation
+- **Combine two tools: a soft margin (slack variables plus the penalty factor C) to tolerate a few points that cannot be separated, and a kernel function to implicitly map the data into a high-dimensional space where it becomes linearly separable.**
 
 Q42:***Can you give an intuitive explanation of PAC learning theory?***
 
-- PAC (Probably Approximately Correct) learning theory. Its main idea is: since we do not know the true data distribution, nor the true target function, it is unrealistic to expect to learn a function with an expected error of 0 from a finite number of training samples; we need to lower our expectations of the learning algorithm's ability and only require that the learning algorithm can learn an approximately correct hypothesis with a certain probability;
-- A PAC-learnable algorithm is a learning algorithm that can learn an approximately correct probability distribution from a reasonable amount of training data in polynomial time
-- PAC learning theory can help analyze under what conditions a machine learning method can learn an approximately correct classifier; if the model's hypothesis space is to be larger and the generalization error smaller, more samples are needed.
+- **PAC (Probably Approximately Correct) theory says that with only finite samples and an unknown true distribution, it is unrealistic to demand a model with zero error; we can only require the algorithm to learn, with high probability, a model with small error.**
+- PAC learnable: an algorithm can, in polynomial time and with a reasonable number of samples, learn with probability at least $1-\delta$ a hypothesis whose error is at most $\epsilon$.
+- It tells us how many samples we need: the larger the hypothesis space, the smaller the required error and the higher the confidence, the more samples are needed.
 
 Q43:***Can support vector machines be used for outlier detection?***
 
-- Yes, using one-class SVM; in anomaly detection scenarios, one-class SVM finds a hyperplane, with the learning objective of maximizing the distance from the separating hyperplane to the origin; the hyperplane encircles the positive samples, and this circle is used to determine whether a new data point is a positive sample. If it is inside the circle, it is a positive sample; if it is outside the circle, it is an outlier
+- **Yes, with a One-class SVM. It trains only on normal samples and finds a hyperplane that maximizes the margin between the data and the origin, effectively drawing a "circle" around the normal data; a new sample inside the circle is normal, outside it is an outlier.**
 
 Q44:***Does SVM suffer from the curse of dimensionality?***
 
-- The curse of dimensionality: to obtain better classification results, we need to add more features. As the number of features increases, although the classifier's fit becomes more accurate, the amount of computation increases significantly and the density of data in the space decreases sharply. The classifier then also learns the noise, so overfitting occurs;
-- Through the kernel trick, SVM replaces high-dimensional operations with an equivalent low-dimensional kernel function, avoiding the increase in computation; but it can hardly avoid the overfitting problem of the curse of dimensionality
+- **Partly. The kernel trick means SVM never computes explicitly in the high-dimensional space, so computation does not explode with dimension; but in high dimensions the data becomes sparse and the model can still learn noise, so the overfitting risk remains.**
 
 Q45:***What is Mercer's theorem, and how is it related to SVM?***
 
-- Mercer's theorem defines a necessary condition for kernel functions: **K is a valid kernel function ==> the kernel matrix K is symmetric positive semi-definite**
-- Mercer's theorem shows that to prove $K$ is a valid kernel function, we do not need to find the mapping function $\phi$; we only need to compute each $K_{ij}$ on the training set and then check whether the matrix $K$ is positive semi-definite (using methods such as the leading principal minors being greater than or equal to zero).
+- **Mercer's theorem gives the condition for a function to be a valid kernel: for any set of samples, its kernel matrix must be symmetric positive semi-definite.**
+- Significance: to check whether a function is a valid kernel, you don't need to find the mapping $\phi$; you only need to check that the kernel matrix is symmetric positive semi-definite.
 
 Q46:***When using SVM, how can the RBF kernel be optimized to handle a large number of training samples?***
 
-- By using Random Features, kernel methods can be scaled to large datasets; this method comes from "Random Features for Large-Scale Kernel Machines" at NIPS 2007. Its basic idea is to construct a "random" mapping $z:R^{d}\rightarrow R^{D}$ that maps the data directly into a high-dimensional space, such that the inner product in this space approximates the kernel function $K(x,y)$; the feature mapping can be approximated by MC sampling; doing linear SVM in the $R^{D}$ space scales effectively to large datasets, with computation and storage linear in the data.
+- **Use random features (Random Fourier Features): build a random explicit mapping into a finite-dimensional space whose inner products approximate the RBF kernel, then train a linear SVM there. Computation and storage then grow linearly with the number of samples, so it scales to large data.**
+- The method comes from the NIPS 2007 paper "Random Features for Large-Scale Kernel Machines"; the mapping is built by Monte Carlo sampling.
 
 Reference: [https://maelfabien.github.io/machinelearning/largescale/](https://maelfabien.github.io/machinelearning/largescale/)
 
@@ -309,16 +285,14 @@ Reference: [https://maelfabien.github.io/machinelearning/largescale/](https://ma
 
 Q47:***Why is SVM no longer popular?***
 
-- We are now in the era of big data, and training samples are generally massive in scale. Because of SVM's extremely large computational cost on large samples, its popularity has declined
+- **This is the big-data era, with millions of samples; kernel SVM training costs roughly quadratic to cubic time in the number of samples and scales poorly, while deep learning performs better on big data, images and text and learns features automatically, so SVM's popularity has declined.**
 
 Q48:***When does SVM perform poorly?***
 
-- When the sample size is very large and the kernel mapping dimension is very high, SVM's computational cost is too large, so it is not very suitable
-- If the feature dimension is far greater than the number of samples, SVM performs only moderately
-- When there is a large amount of missing data
+- **When the sample size is very large and the kernel mapping is very high-dimensional, the computation is too heavy; when the feature dimension is far larger than the number of samples, results are mediocre; and it also does poorly when the data has many missing values.**
 
 Q49:***How do you choose a kernel for SVM?***
 
-- If the feature dimension is very high, the data is often linearly separable (the idea of SVM for solving non-linear classification problems is to map samples into a higher-dimensional feature space), so LR or a linear-kernel SVM can be used;
-- If the number of samples is very large, since the objective function involves computing inner products between every pair of samples when solving the optimization problem, a Gaussian kernel clearly requires more computation than a linear kernel, so manually add some features to make the data linearly separable, and then use LR or a linear-kernel SVM;
-- If neither of the above holds, i.e. the feature dimension is small and the number of samples is normal, a Gaussian-kernel SVM can be used.
+- **With high feature dimension or many samples, use a linear kernel (or logistic regression); with low feature dimension and a moderate number of samples, use the Gaussian (RBF) kernel.**
+- With high feature dimension the data is usually already close to linearly separable, so there is no need to map it further.
+- With many samples, the Gaussian kernel must compute pairwise inner products, which costs far more than the linear kernel; you can hand-add some features and then use a linear model.

@@ -146,25 +146,17 @@ There are both low-precision and high-precision weights (float16 and float32). T
 
 Q22: **During RLHF, if the RM score keeps increasing as training goes on, does that necessarily mean the results are good? Are there extreme cases?**
 
-- **Not necessarily.** The reward model (RM) is only an **imperfect proxy** for human preferences, and during optimization the policy exploits the RM's loopholes, leading to **reward hacking / reward over-optimization**, in line with Goodhart's law: "when a measure becomes a target, it ceases to be a good measure". Empirically, as the policy drifts away from the initial model (KL grows), the RM score keeps rising, while the true (human or gold-RM) evaluation first rises and then falls.
-- **Extreme cases**:
-    - Outputs become ever more **verbose** (RMs often prefer long answers, i.e. length bias), or keep piling up phrases, formatting or emojis the RM likes;
-    - **Sycophancy**: blindly agreeing with the user's views, even giving wrong answers;
-    - Over-refusal or excessive caution, producing empty answers;
-    - **Mode collapse**: loss of output diversity, or even repetitive or garbled text that the RM still scores highly (RM scores are unreliable on out-of-distribution samples).
-- **Mitigations**:
-    - Add a **KL penalty** against the SFT/reference model to the PPO objective, $r = r_{RM}(x,y) - \beta \log\frac{\pi_\theta(y|x)}{\pi_{ref}(y|x)}$, to limit policy drift;
-    - Run regular **human evaluations or evaluations with a stronger model** during training and early-stop on a validation set, rather than looking only at the RM score;
-    - Improve the RM: more and more diverse preference data, **iteratively updating the RM** (collecting and relabeling samples from the new policy online), RM ensembles, length normalization, etc.;
-    - Alternatively use direct preference optimization methods such as DPO, or rule-based rewards on verifiable tasks (RLVR), reducing reliance on a learned RM.
+- **Not necessarily. The reward model is only an imperfect proxy for human preferences, and the policy exploits its loopholes (reward hacking), so the RM score can keep rising while human evaluation first rises and then falls; this is Goodhart's law.**
+- Extreme cases: answers grow ever more verbose and pile up phrases and formatting the RM likes; sycophantic agreement with the user, even giving wrong answers; over-refusal and empty answers; mode collapse, with repetitive or even garbled output that the RM still scores highly.
+- The cause is that the RM's scores are unreliable on samples far from its training distribution, and the farther the policy drifts from the initial model, the easier it is to exploit.
+- Mitigations: add a KL penalty against the reference model to limit drift; regularly evaluate with humans or a stronger model and early-stop on that, rather than looking only at the RM score.
+- Improve the RM (more diverse preference data, iteratively updating the RM with samples from the new policy, RM ensembles, length normalization), or switch to DPO, or to rule-based rewards on verifiable tasks (RLVR).
+- Key formula: $r = r_{RM}(x,y) - \beta \log\frac{\pi_\theta(y|x)}{\pi_{ref}(y|x)}$
 
 Q23: **Explain how P-tuning works, and describe how it differs from traditional fine-tuning methods.**
 
-- **How it works**: P-tuning (2021) belongs to the **soft prompt / prompt tuning** family. Instead of hand-designing a discrete text prompt, it inserts the embeddings of several **learnable continuous virtual tokens** into the input, e.g. the template $[P_1, \dots, P_m, x, P_{m+1}, \dots, P_n, y]$. The embeddings of these pseudo tokens are produced by a small **prompt encoder (bidirectional LSTM + MLP)** to model the dependencies between them and stabilize optimization. During training **all parameters of the pre-trained model are frozen**, and only the prompt encoder / virtual-token parameters are updated.
-- **P-tuning v2**: adding prompts only at the input layer is not good enough for smaller models and hard tasks (e.g. sequence labeling), so v2 **adds learnable prefix vectors at every Transformer layer** (similar to Prefix-tuning, acting on each layer's keys/values) and drops the LSTM reparameterization, getting close to full fine-tuning across model scales and tasks.
-- **Differences from traditional fine-tuning**:
-    - **Trainable parameters**: full fine-tuning updates all parameters; P-tuning trains only about 0.01%–0.1% (v2 about 0.1%–3%) of them.
-    - **Storage and deployment**: full fine-tuning saves a complete model per task; with P-tuning many tasks share one frozen backbone, each task only stores tiny prompt parameters, and different tasks can be mixed in the same batch.
-    - **Memory and compute**: no optimizer states are needed for the backbone parameters, so memory use drops sharply (though forward/backward passes still go through the whole model).
-    - **Performance and stability**: full fine-tuning is usually best; P-tuning can approach it on large models but is usually somewhat worse on small models, and is more sensitive to initialization and learning rate; freezing the backbone also reduces catastrophic forgetting.
-- Compared with **LoRA**: LoRA modifies the weights (a low-rank delta that can be merged back into the original weights, with no inference overhead), while P-tuning modifies the inputs/activations (and consumes part of the context length); LoRA is currently more common for LLM fine-tuning.
+- **P-tuning is a soft-prompt method: it inserts the embeddings of several learnable continuous "virtual tokens" into the input, freezes the whole pre-trained model, and trains only these prompt parameters, whereas traditional fine-tuning updates all of the model's parameters.**
+- The original P-tuning uses a small prompt encoder (bidirectional LSTM + MLP) to produce the virtual-token embeddings, which makes optimization more stable.
+- P-tuning v2 adds learnable prefixes at every Transformer layer (similar to Prefix-tuning) and drops the LSTM, getting close to full fine-tuning across model scales and tasks.
+- Compared with full fine-tuning: only about 0.01%–3% of parameters are trainable; each task stores only tiny prompt parameters and can share one backbone; no optimizer states for the backbone, so memory is lower and there is less catastrophic forgetting; but results are usually somewhat worse on small models, and it is more sensitive to initialization and learning rate.
+- Compared with LoRA: LoRA modifies the weights, can be merged back into the original model and has no inference overhead; P-tuning modifies the input and consumes part of the context length. LoRA is currently more common for LLM fine-tuning.

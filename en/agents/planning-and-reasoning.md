@@ -2,127 +2,106 @@
 
 Q1: ***Why do agents need planning?***
 
-- Complex tasks often require multiple steps with dependencies between them; an agent without planning tends to **take things one step at a time**, leading to omissions, repetition or drifting from the goal.
-- What planning does: breaks the goal into executable subtasks, determines order and dependencies, estimates the tools and information needed, and provides checkpoints for execution.
-- Good planning must also support **dynamic adjustment based on execution feedback**.
+- **Complex tasks have multiple interdependent steps; an agent without planning tends to improvise step by step, leading to omissions, repetition or drift from the goal.**
+- Planning breaks the goal into executable subtasks, fixes order and dependencies, anticipates needed tools and information, and provides checkpoints.
+- Good planning must also adapt to execution feedback.
 
 Q2: ***What are common task decomposition methods?***
 
-- **Prompt-based decomposition**: simply ask the model to "list the steps first, then execute", or use Least-to-Most prompting (solve simple subproblems first, then progressively harder ones);
-- **Plan-and-Execute**: generate an explicit plan, then execute step by step and replan;
-- **Hierarchical decomposition**: high-level goal → subgoals → atomic actions, suited to long tasks;
-- **DAG-based decomposition**: organize subtasks as a directed acyclic graph, so subtasks without dependencies can **run in parallel**;
-- **External planners**: translate the problem into a formal language (e.g. PDDL) and solve it with a classical planner, suitable for domains with well-defined constraints.
-- In practice, agents often maintain a **todo list** as an explicit plan and update it as they go.
+- **Common methods are prompted decomposition, Plan-and-Execute, hierarchical decomposition, DAG decomposition and external planners; in practice the most common is a to-do list updated during execution.**
+- Prompted: have the model list steps before executing, or Least-to-Most (solve simple subproblems first, then harder ones).
+- Hierarchical: high-level goal → subgoals → atomic actions, suited for long tasks.
+- DAG: subtasks form a directed acyclic graph, and independent ones run in parallel.
+- External planner: translate the problem into a formal language like PDDL for a classical planner, suited for well-constrained domains.
 
 Q3: ***What is chain-of-thought (CoT)? Why does it work?***
 
-- CoT has the model **generate intermediate reasoning steps** before giving the final answer.
-- Two forms:
-    - **Few-shot CoT**: show worked solutions with reasoning in the examples;
-    - **Zero-shot CoT**: add a sentence such as "Let's think step by step".
-- Why it works (intuitive explanation):
-    - It breaks a complex problem into several simple steps, lowering the "amount of computation" each token must carry;
-    - The generated intermediate results become context for later reasoning, which is equivalent to **adding computation at inference time**;
-- Limitations: the reasoning may be **unfaithful** to the model's actual decision process; errors in intermediate steps propagate to the final answer; it adds unnecessary tokens for simple tasks.
+- **CoT has the model write intermediate reasoning steps before the answer, which breaks a hard problem into simple steps and spends more compute at inference.**
+- Two forms: few-shot CoT (examples show the reasoning) and zero-shot CoT (add "let's think step by step").
+- Why it works: intermediate results become context for later reasoning, so each token carries less computation.
+- Limits: the reasoning may not be faithful to the real decision; intermediate errors propagate; it wastes tokens on simple tasks.
 
 Q4: ***What is self-consistency?***
 
-- **Sample multiple reasoning paths at a higher temperature** for the same question, then take a **majority vote** over the final answers and choose the most frequent one.
-- Rationale: the correct answer can often be reached via many different reasoning paths, while wrong answers are more scattered.
-- Pros: simple, no training needed, and noticeably improves tasks with well-defined answers such as math and commonsense reasoning;
-- Cons: cost grows linearly with the number of samples $N$; not applicable to open-ended generation (answers cannot be voted on directly) — instead an LLM can be used to pick the most consistent answer (Universal Self-Consistency).
+- **Sample several reasoning paths for the same question at a higher temperature, then majority-vote on the final answers.**
+- Rationale: the correct answer is reachable via many paths, while wrong answers are scattered.
+- Pros: simple, no training, clear gains on tasks with definite answers like math and commonsense reasoning.
+- Cons: cost grows linearly with the number of samples; open-ended generation can't be voted on directly, so use an LLM to pick the most consistent answer (Universal Self-Consistency).
 
 Q5: ***What is tree-of-thoughts (ToT)? How does it differ from CoT?***
 
-- CoT is a **single linear** reasoning path; ToT organizes reasoning into a **tree**:
-    - Each node is a partial solution (a "thought");
-    - At each step, multiple candidate thoughts are generated;
-    - The model **evaluates** the candidates (scoring or voting);
-    - A **search algorithm** (BFS/DFS/beam search) expands promising branches and **backtracks** when necessary.
-- Suited to problems that require exploration and backtracking (e.g. the Game of 24, puzzles, planning for creative writing).
-- Downsides: many calls and high cost; limited benefit for many everyday tasks.
-- Related extensions: **Graph-of-Thoughts** (allows thoughts to merge into a graph structure), combining **Monte Carlo Tree Search (MCTS)** with LLMs, etc.
+- **CoT is a single linear reasoning path; ToT organizes reasoning as a tree: generate several candidate thoughts per step, have the model evaluate them, then use search to expand promising branches and backtrack when needed.**
+- Search can be BFS, DFS or beam search.
+- It suits problems needing exploration and backtracking, such as Game of 24, puzzles and writing plans.
+- Downsides: many calls and high cost, limited benefit for everyday tasks; extensions include Graph-of-Thoughts and LLM + MCTS.
 
 Q6: ***What are reasoning models? How do they differ from ordinary LLMs?***
 
-- Reasoning models are specially trained models that generate a **long internal thinking process** before answering (e.g. the OpenAI o-series, DeepSeek-R1, and the extended thinking modes of Claude, Gemini and others).
-- Main differences:
-    - Trained with **reinforcement learning** (often on verifiable rewards such as math answers and code tests), the model learns behaviors such as self-verification, backtracking and trying different approaches;
-    - They spend more tokens "thinking" at inference time and are **clearly stronger on complex tasks such as math, programming and scientific reasoning**;
-    - The cost is higher latency and expense, and they may "overthink" simple tasks.
-- Many APIs support setting a **thinking budget/reasoning effort** to trade off quality against cost.
+- **Reasoning models are specially trained to produce a long internal thinking process before answering (e.g. the o-series, DeepSeek-R1, and the thinking modes of Claude and Gemini), and are clearly stronger at math, coding and scientific reasoning.**
+- They are trained mainly with reinforcement learning on verifiable rewards, learning to self-verify, backtrack and try other approaches.
+- The cost is higher latency and price, and they may overthink simple tasks.
+- Many APIs let you set a thinking budget or reasoning effort to trade quality against cost.
 
 Q7: ***What is test-time compute scaling?***
 
-- It means investing more computation at the **inference stage** to improve performance, rather than relying only on bigger models or more training data.
-- Two broad categories:
-    - **Sequential scaling**: have the model generate longer chains of thought (long thinking in reasoning models, reflection and revision);
-    - **Parallel scaling**: sample multiple answers and then select, e.g. Best-of-N, majority voting, selection with a **verifier/reward model**, tree search.
-- Research shows that on many reasoning tasks, increasing test-time compute can yield gains comparable to or greater than scaling up the model, but the gains gradually saturate and depend on problem difficulty.
-- For agents, "multi-step tool calling + reflection" is itself a form of test-time compute.
+- **Spending more compute at inference to improve results, instead of relying only on bigger models or more training data.**
+- Sequential scaling: longer chains of thought, reflection and revision.
+- Parallel scaling: sample many answers and pick one, e.g. Best-of-N, majority vote, verifier or reward-model scoring, tree search.
+- On many reasoning tasks the gains rival scaling the model, but they saturate and depend on problem difficulty; an agent's multi-step tool use plus reflection is itself test-time compute.
 
 Q8: ***What are process reward models (PRMs) and outcome reward models (ORMs)?***
 
-- **ORM (Outcome Reward Model)**: scores only the final answer;
-- **PRM (Process Reward Model)**: scores **each step** of the reasoning, can detect wrong steps earlier, and can guide search (e.g. pruning low-scoring branches in beam search).
-- PRMs require step-level annotations and are expensive; for verifiable tasks (math, code), **rule-based verifiers** can be used directly as rewards.
+- **An ORM scores only the final answer; a PRM scores each reasoning step, catching wrong steps earlier and guiding search (e.g. pruning low-scoring branches).**
+- PRMs need step-level labels, which are expensive.
+- For verifiable tasks like math and code, rule-based verifiers can serve directly as the reward.
 
 Q9: ***In agents, what does "interleaved thinking" mean?***
 
-- The model does not just think once at the start; it can **reason again after every tool result** and then decide the next action.
-- Benefits: it can correct the plan promptly based on new observations, reflect on whether the tool result matches expectations, and decide whether more information is needed.
-- This is essentially the same as ReAct's Thought-Action-Observation loop, only natively supported by the model.
+- **The model doesn't just think once at the start; it can reason again after every tool result before choosing the next action.**
+- Benefit: it can correct the plan from new observations, check whether results match expectations, and decide whether more information is needed.
+- It is essentially ReAct's thought-action-observation loop, supported natively by the model.
 
 Q10: ***What are common failure modes in agent planning?***
 
-- **Unrealistic plans**: assuming tools, permissions or information that do not exist;
-- **Rigid plans**: sticking to the original plan after the environment changes or a step fails, without replanning;
-- **Over-planning**: generating lengthy plans for simple tasks, wasting cost;
-- **Wrong decomposition granularity**: subtasks too coarse to execute, or too fine, raising coordination cost;
-- **Missed constraints**: forgetting some of the user's requirements (e.g. budget, format);
-- **Goal drift**: gradually deviating from the original goal over a long task;
-- **Premature completion**: considering the task done without verification;
-- **Long-horizon error accumulation**: the more steps, the greater the impact of early mistakes.
+- **The main ones are unrealistic plans, rigid plans, over-planning, wrong decomposition granularity, missed constraints, goal drift, premature completion, and long-horizon error accumulation.**
+- Unrealistic: assumes tools, permissions or information that don't exist; rigid: doesn't replan after failures or environment changes.
+- Wrong granularity: too coarse to execute, too fine to coordinate; missed constraints: forgetting budget, format and other requirements.
+- Long tasks drift, declare completion without verification, and the more steps, the bigger the effect of early errors.
 
 Q11: ***How can these planning failures be mitigated?***
 
-- Have the model maintain an **explicit plan/todo list** and update its status after each step;
-- Add **verification steps**: confirm each completed subtask with tests, checkers or an evaluator model;
-- Trigger **replanning** on failure rather than retrying blindly;
-- Periodically **restate the original goal and constraints** in long tasks (e.g. keep the goal statement in the context);
-- Introduce **human review** of critical plans;
-- Provide an explicit "definition of done".
+- **Maintain an explicit plan updated after each step, verify each subtask when done, and replan on failure instead of blindly retrying.**
+- Restate the original goal and constraints periodically during long tasks.
+- Add human review for critical plans.
+- Give a clear definition of done.
 
 Q12: ***Is CoT reasoning faithful? What does that mean for agents?***
 
-- Research has found that the reasoning a model writes **does not necessarily reflect the true basis of its decisions**: the model may be influenced by hints in the prompt without acknowledging them in its reasoning, or may arrive at an answer first and then "rationalize" it.
-- Implications:
-    - CoT cannot be treated as a fully reliable explanation or safety-monitoring mechanism;
-    - But CoT monitoring is still one **useful signal** for detecting abnormal behavior (e.g. reward hacking, intent to violate rules).
-- Practice: combine with behavior-level evaluation (what actions were actually executed) rather than relying only on the reasoning text.
+- **Not necessarily: the model may be influenced by hints in the prompt without admitting it, or reach an answer first and rationalize afterwards.**
+- So CoT can't be treated as a fully reliable explanation or safety monitor.
+- But CoT monitoring is still a useful signal for spotting anomalies like reward hacking or rule-breaking intent.
+- In practice, combine it with behavioral evaluation of what actions were actually taken.
 
 Q13: ***How should prompts for reasoning models be written? How do they differ from ordinary models?***
 
-- Reasoning models have built-in thinking, so they usually **do not need** prompts like "think step by step", nor overly detailed prescriptions of reasoning steps;
-- It works better to give **clear goals, constraints and success criteria** and let the model plan by itself;
-- Few-shot examples sometimes have limited effect and may even constrain the model;
-- Cost can be controlled by adjusting the thinking budget; for simple tasks thinking can be turned off or reduced.
+- **Reasoning models think on their own, so give clear goals, constraints and success criteria and let the model plan, rather than prescribing reasoning steps.**
+- Prompts like "think step by step" are usually unnecessary.
+- Few-shot examples help little and can even constrain the model.
+- Control cost with the thinking budget, and turn thinking off or down for simple tasks.
 
 Q14: ***What is the "overthinking" problem?***
 
-- Reasoning models **generate many thinking tokens even for simple questions**, causing unnecessary latency and cost, and sometimes changing correct answers into wrong ones through repeated self-doubt.
-- Mitigation: **route** by task difficulty (non-reasoning mode or a small model for simple tasks), set thinking budgets, use adaptive thinking (letting the model decide how much to think).
+- **Reasoning models generate lots of thinking tokens even on simple questions, adding needless latency and cost, and sometimes second-guess a correct answer into a wrong one.**
+- Mitigations: route by difficulty (non-reasoning mode or a small model for easy tasks), set a thinking budget, use adaptive thinking.
 
 Q15: ***How do you decide whether a task should use a reasoning model or an ordinary model?***
 
-- **Suited to reasoning models**: multi-step math/logic, complex programming and debugging, long tasks requiring planning, analysis of ambiguous problems, review of high-stakes decisions;
-- **Suited to ordinary/fast models**: simple QA, classification, extraction, format conversion, latency-sensitive interaction;
-- A common architecture: **use a reasoning model for planning and key decisions, and fast models to execute many simple subtasks**.
-- Ultimately decide through evaluation on your own tasks rather than intuition.
+- **Use a reasoning model for multi-step math and logic, complex coding and debugging, long-task planning and reviewing high-stakes decisions; use a fast ordinary model for simple QA, classification, extraction, format conversion and latency-sensitive interaction.**
+- Common architecture: the reasoning model plans and makes key decisions, fast models execute many simple subtasks.
+- Ultimately decide by evaluating on your own tasks, not by intuition.
 
 Q16: ***What is Reflexion? How is it similar to reinforcement learning?***
 
-- Reflexion has the agent, after a failed attempt, **reflect in natural language** on the cause of failure (e.g. "I used the wrong API in step 3"), store the reflection in memory, and add it to the context on the next attempt.
-- Similarity: like reinforcement learning, it uses a reward signal to improve the policy, but it **does not update model weights**; instead it stores the "lessons learned" as text in the context/memory (described as "verbal reinforcement learning").
-- Prerequisites: a reliable success/failure signal (e.g. test results) and permission to make multiple attempts.
+- **Reflexion has the agent reflect in natural language on why an attempt failed, store the reflection in memory, and put it into context on the next attempt.**
+- Like RL it uses success/failure signals to improve the policy, but it doesn't update weights; the lessons are stored as text ("verbal reinforcement learning").
+- It requires a reliable success/failure signal (e.g. test results) and multiple allowed attempts.
